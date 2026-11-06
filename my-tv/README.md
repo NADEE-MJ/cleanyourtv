@@ -27,7 +27,10 @@ untouched upstream code, so `git fetch upstream` stays easy.
 * Survived a reboot. Verified with `my-tv/scripts/tv-status.sh` and `tools/check.py` ("nothing drifted").
 * Kept on purpose: Netflix, Chromecast, AirPlay, Google Assistant, the Google TV phone remote service
   (it is what the iPhone Google TV/Home app uses), the TCL game bar.
-* ADB closed at the end of the session (Wireless + USB debugging off). Pairing was left in place on purpose.
+* End of session: Wireless debugging is closed (verified, no mDNS service). Plain `adbd` on port 5555 was **still answering**
+  after `settings put global adb_enabled 0`; it needs USB debugging switched off in the TV's Developer options UI and a
+  reboot, then `my-tv/scripts/check-adb-closed.sh` must say ALL CLOSED (see LOG.md for whether that has been confirmed).
+  The Wireless pairing was left in place on purpose, so next time only the toggle is needed.
 
 ## Files
 
@@ -40,6 +43,7 @@ untouched upstream code, so `git fetch upstream` stays easy.
 | `scripts/connect-tv.sh` | Connect / pair / stop. Works around macOS Local Network privacy. |
 | `scripts/ncrelay.sh` | The loopback relay (built from Apple's `/usr/bin/nc`). |
 | `scripts/tv-status.sh` | Read-only health + drift report. |
+| `scripts/check-adb-closed.sh` | Network-side proof that ADB is closed (mDNS + a real ADB handshake on 5555). |
 | `RUNBOOK.md` | How to redo or repair everything, with the gotchas from the first run. |
 | `LOG.md` | Dated log of what was done and why. Append to it. |
 | `prompts/ui-rewrite.md` | Starting prompt for the launcher UI rewrite session. |

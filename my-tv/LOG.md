@@ -25,7 +25,10 @@ guards in `disable.sh`; main risks are third-party add-ons and the AI-driven ins
    Install script verified Home moved to it and disabled `launcherx`.
 9. Re-ran install with `HOME_KEY_SERVICE=1` and pushed `my-tv/theme` so Gear and YouTube buttons work (confirmed by the owner).
 10. Owner rebooted the TV: everything survived (27 disabled, Home = new launcher, key helper on). `tools/check.py`: nothing drifted.
-11. Wrote `my-tv/` (this folder), the skill, and the UI-rewrite prompt. Closed ADB.
+11. Wrote `my-tv/` (this folder), the skill, and the UI-rewrite prompt; pushed to the fork.
+12. Closing ADB: set `adb_wifi_enabled=0` / `adb_enabled=0` over ADB. Wireless debugging closed (verified). **Port 5555 kept
+    answering** (plain adbd replied AUTH to a CNXN probe). Wrote `scripts/check-adb-closed.sh` for that check.
+    OPEN ITEM: owner to switch USB debugging off in the UI and reboot, then re-run the check. Update this entry when it says ALL CLOSED.
 
 **Known leftovers / ideas**
 * Projectivy launcher is still installed (unused). Remove it, or keep as a fallback.

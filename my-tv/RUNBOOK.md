@@ -124,8 +124,15 @@ nc -vz -G 3 <TV_IP> 5555        # want: refused / no route. Check the old connec
 dns-sd -B _adb-tls-connect._tcp local.   # Ctrl-C after 4 s: the TV's service must be GONE
 ```
 
-`tools/adb-closed.py` is the repo's checker, but it is Python: inside the sandbox it just says "No route to
-host", which proves nothing. Run it from a normal Terminal, or use the `nc` / `dns-sd` checks above.
+`my-tv/scripts/check-adb-closed.sh` does all of this (mDNS + a real ADB `CNXN` handshake on 5555) and exits 0 only when
+everything is closed. `tools/adb-closed.py` is the repo's checker, but it is Python: inside the sandbox it just says
+"No route to host", which proves nothing; run it from a normal Terminal if you want a second opinion.
+
+**Gotcha (2026-11-06):** `adb shell settings put global adb_wifi_enabled 0; ... adb_enabled 0` closed Wireless debugging
+but plaintext adbd kept answering on 5555 (replying `AUTH`, i.e. it still offers the on-screen "Allow USB debugging?"
+prompt). Don't rely on that command. Switch both toggles off **in the TV's Developer options UI**, revoke USB
+authorisations if you want to be strict, **reboot**, then run the check. Do it as the last step, after everything else,
+because it ends your ADB session.
 Wireless debugging has a port of its own and may stay open after USB debugging is turned off: check it.
 
 ## After a firmware update
