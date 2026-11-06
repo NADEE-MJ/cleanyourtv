@@ -158,4 +158,11 @@
     <string name="clock_format_system">System</string>
     <string name="clock_format_12">12-hour</string>
     <string name="clock_format_24">24-hour</string>
+    <string name="screensaver_state">Screensaver: %1$s</string>
+    <string name="screensaver_preview">Preview screensaver</string>
+    <string name="screensaver_drift_clock">Drift clock</string>
+    <string name="screensaver_clock_aurora">Drift clock + Aurora</string>
+    <string name="screensaver_aurora">Aurora</string>
+    <string name="screensaver_dunes">Dunes</string>
+    <string name="screensaver_ripples">Ripples</string>
 </resources>

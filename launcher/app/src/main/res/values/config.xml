@@ -533,6 +533,11 @@
          (OLED panels); they still move every minute. Ignored while clock_wallpaper shows a picture. Can also be set
          with "clock_glow" in a theme. -->
     <bool name="clock_glow">true</bool>
+    <!-- The screensaver's look (Home idle clock and the system screensaver): drift_clock (the clock drifting
+         over a soft glow, the default), drift_clock_aurora (the clock over slow colour clouds), aurora, dunes or
+         ripples (moving scenes without a clock). Every style keeps moving, so nothing burns in. Also chosen on the
+         TV in Launcher settings, or with "screensaver_style" in a theme's config.json. -->
+    <string name="screensaver_style" translatable="false">drift_clock</string>
     <!-- Shape of the glow behind the focused app, in its colour: radial (a soft glow, the default) or horizon (the
          colour washes down from the top edge and fades to black, brightest along the top). The cinematic shelf
          keeps its own glow. Can also be set with "glow_style": "horizon" in a theme's config.json. -->

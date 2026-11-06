@@ -1,6 +1,7 @@
 package com.gathin.tvhome;
 
 import android.animation.ArgbEvaluator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -14,6 +15,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.ImageView;
 
 import java.io.File;
@@ -33,6 +35,19 @@ import java.util.Set;
  */
 final class ClockScene {
 
+    /** screensaver_style values, in the order the on-TV setting cycles through them. */
+    static final String STYLE_DRIFT_CLOCK = "drift_clock";
+    static final String STYLE_CLOCK_AURORA = "drift_clock_aurora";
+    static final String[] STYLES = {STYLE_DRIFT_CLOCK, STYLE_CLOCK_AURORA,
+            ScreensaverView.AURORA, ScreensaverView.DUNES, ScreensaverView.RIPPLES};
+    /** One leg of the clock's drift: slow enough to read, never still. */
+    private static final long DRIFT_MS = 45_000L;
+
+    static boolean validStyle(String style) {
+        for (String s : STYLES) if (s.equals(style)) return true;
+        return false;
+    }
+
     private static final long MOVE_MS = 60_000L;
     /** The glow's colour change: 16 steps over 8 s. Animated per frame it redrew the full-screen gradient ~480 times. */
     private static final int GLOW_STEPS = 16;
@@ -45,6 +60,10 @@ final class ClockScene {
     private final View content;
     private final ClockRefresh clockRefresh;
     private final ImageView ambient;
+    private final ScreensaverView scene;
+    private String style = STYLE_DRIFT_CLOCK;
+    private ValueAnimator drift;
+    private float glowX = -1, glowY = -1;
     private final GradientDrawable glow;
     private int colorIndex;
     private int glowColor;
@@ -67,7 +86,6 @@ final class ClockScene {
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
-            moveClock();
             shiftGlow();
             advanceWallpaper();
             handler.postDelayed(this, MOVE_MS);
@@ -79,6 +97,7 @@ final class ClockScene {
         content = root.findViewById(R.id.dreamContent);
         clockRefresh = new ClockRefresh(content);
         ambient = root.findViewById(R.id.dreamAmbient);
+        scene = root.findViewById(R.id.dreamScene);
         glow = new GradientDrawable();
         glow.setGradientType(GradientDrawable.RADIAL_GRADIENT);
         ambient.setBackground(glow);
@@ -93,7 +112,10 @@ final class ClockScene {
         content.post(() -> {
             placeClock();
             content.animate().alpha(1f).setDuration(1200).start();
+            drift();
         });
+        if (ScreensaverView.isScene(style)) scene.start(style, 1f);
+        else if (STYLE_CLOCK_AURORA.equals(style)) scene.start(ScreensaverView.AURORA, 0.65f);
         handler.removeCallbacks(tick);
         handler.postDelayed(tick, MOVE_MS);
         clockRefresh.start();
@@ -104,6 +126,9 @@ final class ClockScene {
         handler.removeCallbacksAndMessages(null);   // the tick and any glow steps still queued
         clockRefresh.stop();
         content.animate().cancel();
+        if (drift != null) drift.cancel();
+        drift = null;
+        scene.stop();
         wallpaperGeneration++;   // a decode still running must not attach its picture to a stopped scene
     }
 
@@ -119,6 +144,14 @@ final class ClockScene {
         try {
             cfg = Config.load(ctx);
         } catch (RuntimeException e) {
+            return;
+        }
+        style = cfg.screensaverStyle;
+        if (!STYLE_DRIFT_CLOCK.equals(style)) {
+            // The other styles draw their own backdrop: no glow, no wallpaper.
+            wallpaperShown = true;
+            ambient.setBackground(null);
+            if (ScreensaverView.isScene(style)) content.setVisibility(View.GONE);
             return;
         }
         if (!cfg.clockWallpaper) {
@@ -227,11 +260,44 @@ final class ClockScene {
                 WallpaperMood.timeOfDay(now.getHour() * 60 + now.getMinute(), sun[0], sun[1]));
     }
 
-    private void moveClock() {
-        content.animate().alpha(0f).setDuration(900).withLayer().withEndAction(() -> {
-            placeClock();
-            content.animate().alpha(1f).setDuration(1200).withLayer().start();
-        }).start();
+    /**
+     * The clock glides to a new random spot, then the next, for as long as the screensaver is up, so no pixel
+     * holds the same light for long. Only the clock's position changes (no redraw of its text); the glow is
+     * re-centred when the clock has moved a few pixels, not every frame.
+     */
+    private void drift() {
+        if (content.getVisibility() != View.VISIBLE) return;
+        View parent = (View) content.getParent();
+        int maxX = Math.max(0, parent.getWidth() - content.getWidth());
+        int maxY = Math.max(0, parent.getHeight() - content.getHeight());
+        final float fromX = content.getX(), fromY = content.getY();
+        final float toX = maxX * (0.05f + 0.9f * random.nextFloat());
+        final float toY = maxY * (0.05f + 0.9f * random.nextFloat());
+        if (drift != null) drift.cancel();
+        drift = ValueAnimator.ofFloat(0f, 1f);
+        drift.setDuration(DRIFT_MS);
+        drift.setInterpolator(new AccelerateDecelerateInterpolator());
+        drift.addUpdateListener(a -> {
+            float f = (float) a.getAnimatedValue();
+            content.setX(fromX + (toX - fromX) * f);
+            content.setY(fromY + (toY - fromY) * f);
+            followGlow(parent);
+        });
+        drift.addListener(new android.animation.AnimatorListenerAdapter() {
+            private boolean cancelled;
+            @Override public void onAnimationCancel(android.animation.Animator a) { cancelled = true; }
+            @Override public void onAnimationEnd(android.animation.Animator a) { if (!cancelled) drift(); }
+        });
+        drift.start();
+    }
+
+    private void followGlow(View parent) {
+        if (wallpaperShown || parent.getWidth() == 0 || parent.getHeight() == 0) return;
+        float cx = content.getX() + content.getWidth() / 2f, cy = content.getY() + content.getHeight() / 2f;
+        if (Math.abs(cx - glowX) < 8 && Math.abs(cy - glowY) < 8) return;
+        glowX = cx;
+        glowY = cy;
+        glow.setGradientCenter(cx / parent.getWidth(), cy / parent.getHeight());
     }
 
     /** A random spot that keeps the whole clock on screen, with the glow centred behind it. */

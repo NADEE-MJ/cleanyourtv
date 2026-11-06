@@ -1054,12 +1054,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (openInputsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
         if (gameDay != null && !stopped) gameDay.read();
-        grid.scrollToPosition(0);
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
         if (stopped) {
+            // Back from an app: nothing is on screen to animate, so jump straight to the top.
+            grid.scrollToPosition(0);
             tileRefresh.onHomeAgain();
+        } else if (animations) {
+            // Home pressed while Home is showing: glide back up instead of jumping. A long way down, first jump
+            // to a few rows from the top so the glide stays short; focusTile's smooth scroll does the rest.
+            GridLayoutManager lm = (GridLayoutManager) grid.getLayoutManager();
+            int first = lm.findFirstVisibleItemPosition();
+            int near = COLUMNS * 3;
+            if (first > near) grid.scrollToPosition(near);
+            grid.post(() -> {
+                focusTile(0);
+                grid.smoothScrollToPosition(0);
+            });
         } else {
+            grid.scrollToPosition(0);
             // Still on screen (the quick panel was over it, or Home was already in front): the tiles are current,
             // so only go back to the first one; rebuilding would replay the entrance animation for nothing.
             grid.post(() -> focusTile(0));
