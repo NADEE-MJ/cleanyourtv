@@ -1,0 +1,11 @@
+# Batch B: retail demo / hotel mode and preloaded TCL apps
+com.tcl.exhibit
+com.tcl.esticker
+com.tcl.hotelmenu
+com.tcl.ocean.instructions             # e-manual
+com.tcl.repairguide                    # not installed on this TV; skipped harmlessly
+com.tcl.browser                        # TCL web browser (user: not needed)
+com.tcl.ui_mediaCenter                 # USB media player (user: not used)
+com.tcl.smartalexa                     # Alexa (user: not used)
+android.autoinstalls.config.google.gtvpai   # silently installs partner apps
+com.google.android.feedback

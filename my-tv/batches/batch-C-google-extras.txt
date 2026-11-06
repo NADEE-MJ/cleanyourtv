@@ -1,0 +1,7 @@
+# Batch C: Google extras and the user's own picks
+com.android.tv.feedbackconsent
+com.google.android.apps.tv.dreamx      # ambient mode screensaver (user: not needed)
+com.google.android.play.games          # (user: not needed)
+com.google.android.youtube.tvmusic     # (user: not needed)
+com.google.android.marvin.talkback     # screen reader (user: remove)
+com.tcl.UpdatePeripheral               # TCL soundbar updates (user: no soundbar)

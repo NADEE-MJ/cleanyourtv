@@ -1,0 +1,60 @@
+# My TV: TCL QM6K Pro Google TV (model "Smart TV Pro", device G08, product G08_4K_US, MediaTek tcl9618)
+# Android 14 (Google TV), firmware tcl9618-user 14 UTT2.250416.001 AU14 -- applied and reboot-checked 2026-11-06.
+# Base: examples/tcl-qm6k-google-tv/debloat.txt (its header says AU16; this AU14 unit took it with no trouble).
+#
+# THIS is the combined list for checking drift after a firmware update:
+#     my-tv/scripts/tv-status.sh
+#     TV_HOST=127.0.0.1:25560 tools/venv/bin/python -I tools/check.py my-tv/debloat.txt com.gathin.tvhome
+#     (add --fix to put it back; check.py re-runs disable.sh's safety checks first)
+# To APPLY from scratch use the four batches in my-tv/batches/ in order A, B, C, D (small batches with a
+# health check between). Undo records for those batches live in ~/.cleanyourtv (host 127.0.0.1:25560).
+#
+# Everything is DISABLED, never uninstalled. Differences from the upstream QM6K list:
+#   + com.google.android.marvin.talkback   (screen reader: not used)
+#   + com.tcl.UpdatePeripheral             (TCL soundbar updates: no soundbar)
+#   kept ON on purpose: Netflix, Chromecast (mediashell), AirPlay x3, Google Assistant (katniss),
+#   com.google.android.tv.remote.service (the iPhone Google TV / Home remote), com.tcl.gamebar (game mode/VRR).
+#   Not applied (upstream "reported safe on AU14" extras): webviews, t_solo, partnersetup, onetimeinitializer,
+#   syncadapters.calendar, mediatek speakerservice / backgrounddetection.
+# Never disable: com.tcl.providers.config, com.tcl.initsetup, com.tcl.factory.view (dropped Wi-Fi on AU14, upstream #23).
+
+# TCL tracking and analytics
+com.tcl.ttvs                           # Samba TV ACR viewing tracking, TCL BI analytics, Alexa core, T-Cast
+com.tcl.logkit                         # log capture and upload
+com.tcl.usercenter                     # TCL account sign-in nags
+
+# TCL content, ads and promos
+com.tcl.tv.plus                        # TCL TV+ content app
+com.tcl.channelplus                    # TCL Live FAST channels
+com.tcl.tv.tclhome_passive             # pushes TCL content to the home screen at boot
+com.tcl.partnercustomizer              # TCL tweaks to Google TV home rows
+com.tcl.interactive                    # TCL TIAS background service
+com.tcl.smartlink.core                 # bundles a silent app installer
+com.tcl.messagebox                     # TCL push messages and promos
+
+# Retail demo / hotel mode
+com.tcl.exhibit
+com.tcl.esticker
+com.tcl.hotelmenu
+
+# Preloaded apps and services
+com.tcl.ocean.instructions             # e-manual
+com.tcl.repairguide                    # not installed on this TV ("Unknown package" on disable is harmless)
+com.tcl.browser                        # TCL web browser
+com.tcl.ui_mediaCenter                 # USB media player
+com.tcl.smartalexa                     # Alexa
+android.autoinstalls.config.google.gtvpai   # silently installs partner apps
+com.google.android.feedback
+com.android.tv.feedbackconsent
+com.google.android.apps.tv.dreamx      # ambient mode screensaver (the launcher has its own clock screensaver)
+com.google.android.play.games
+com.google.android.youtube.tvmusic
+com.google.android.marvin.talkback
+com.tcl.UpdatePeripheral
+
+# Needed for the custom launcher. Disable only AFTER the Wi-Fi networks no longer belong to it
+# (forget + rejoin Wi-Fi on the TV first) -- disable.sh skips it otherwise.
+com.google.android.tungsten.setupwraith
+
+# Not in this list but also off (done by launcher/build-and-install.sh, tracked by check.py's launcher arg):
+#   com.google.android.apps.tv.launcherx   (stock Google TV launcher)

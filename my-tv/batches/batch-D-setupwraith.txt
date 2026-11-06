@@ -1,0 +1,2 @@
+# Batch D: Google TV setup wizard; needed off for a custom launcher. Wi-Fi networks re-joined so they no longer belong to it.
+com.google.android.tungsten.setupwraith
