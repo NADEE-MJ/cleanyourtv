@@ -28,7 +28,8 @@ guards in `disable.sh`; main risks are third-party add-ons and the AI-driven ins
 11. Wrote `my-tv/` (this folder), the skill, and the UI-rewrite prompt; pushed to the fork.
 12. Closing ADB: set `adb_wifi_enabled=0` / `adb_enabled=0` over ADB. Wireless debugging closed (verified). **Port 5555 kept
     answering** (plain adbd replied AUTH to a CNXN probe). Wrote `scripts/check-adb-closed.sh` for that check.
-    OPEN ITEM: owner to switch USB debugging off in the UI and reboot, then re-run the check. Update this entry when it says ALL CLOSED.
+13. Owner switched USB debugging off in the UI and rebooted. `scripts/check-adb-closed.sh`: ALL CLOSED (no wireless service,
+    5555 refuses; TV confirmed up on the network). Wireless pairing deliberately left in place.
 
 **Known leftovers / ideas**
 * Projectivy launcher is still installed (unused). Remove it, or keep as a fallback.

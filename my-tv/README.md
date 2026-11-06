@@ -27,10 +27,9 @@ untouched upstream code, so `git fetch upstream` stays easy.
 * Survived a reboot. Verified with `my-tv/scripts/tv-status.sh` and `tools/check.py` ("nothing drifted").
 * Kept on purpose: Netflix, Chromecast, AirPlay, Google Assistant, the Google TV phone remote service
   (it is what the iPhone Google TV/Home app uses), the TCL game bar.
-* End of session: Wireless debugging is closed (verified, no mDNS service). Plain `adbd` on port 5555 was **still answering**
-  after `settings put global adb_enabled 0`; it needs USB debugging switched off in the TV's Developer options UI and a
-  reboot, then `my-tv/scripts/check-adb-closed.sh` must say ALL CLOSED (see LOG.md for whether that has been confirmed).
-  The Wireless pairing was left in place on purpose, so next time only the toggle is needed.
+* End of session: **ADB fully closed**, verified with `my-tv/scripts/check-adb-closed.sh` (ALL CLOSED) after turning debugging
+  off in the TV's UI and rebooting. (Switching it off over ADB with `settings put` was not enough: plain `adbd` kept answering
+  on 5555.) The Wireless pairing was left in place on purpose, so next time only the toggle is needed.
 
 ## Files
 
