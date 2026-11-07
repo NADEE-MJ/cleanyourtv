@@ -13,19 +13,19 @@ final class UiFont {
 
     static Typeface get(Context ctx, int fontString) {
         String value = ctx.getString(fontString);
-        if (value.contains("/font/")) {
-            String name = value.substring(value.lastIndexOf('/') + 1);
-            int dot = name.indexOf('.');
-            if (dot > 0) name = name.substring(0, dot);
-            int id = ctx.getResources().getIdentifier(name, "font", ctx.getPackageName());
-            if (id != 0) {
-                try {
-                    return ctx.getResources().getFont(id);
-                } catch (Resources.NotFoundException ignored) {
-                    // fall through to the system family
-                }
+        // A bundled font is a file path (renamed by the release build); a locale's system family is a plain name.
+        if (value.indexOf('/') >= 0) {
+            // By id, not by name: the release build shrinks resource names, so a lookup by name finds nothing.
+            int id = fontString == R.string.font_light ? R.font.outfit_light
+                    : fontString == R.string.font_extralight ? R.font.outfit_extralight
+                    : fontString == R.string.font_medium ? R.font.outfit_medium
+                    : fontString == R.string.font_regular ? R.font.outfit_regular
+                    : R.font.outfit;
+            try {
+                return ctx.getResources().getFont(id);
+            } catch (Resources.NotFoundException ignored) {
+                return Typeface.DEFAULT;
             }
-            return Typeface.DEFAULT;
         }
         return Typeface.create(value, Typeface.NORMAL);
     }

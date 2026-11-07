@@ -60,6 +60,9 @@ The launcher's own page has these rows, top to bottom:
 - **Background**: OK, Left or Right steps through Glow (the focused app's colour), Aurora, Dunes and Ripples
   (moving, slower and darker than the screensaver's, paused while an app is open) and Daylight (light, after
   Apple TV's), Midnight, Ocean, Sunset or Graphite (still gradients) (`home_background` in a theme).
+- **Remote buttons**: Add a button, press it on the remote, pick an app or an action (Home, Settings, Sleep, Mute,
+  Screensaver, Recent apps, or Nothing); OK on a saved one changes or removes it. The D-pad, OK, Back, Home, power
+  and volume are never offered. Saved after the theme's `app_keys`, so they win.
 - **Screensaver**: OK, Left or Right steps through Drift clock, Drift clock + Aurora, Aurora, Dunes and Ripples
   (`screensaver_style` in a theme); **Preview screensaver** shows the one chosen.
 - **Wallpaper**: one picture from the theme's collection (or its `wallpaper.jpg`), **None**, or **Theme

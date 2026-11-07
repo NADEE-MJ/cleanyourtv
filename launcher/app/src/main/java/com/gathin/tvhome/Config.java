@@ -724,6 +724,20 @@ final class Config {
                 string(json, "festival_until", ""), string(json, "greeting", ""), string(json, "accent_color", ""));
 
         for (String pkg : HiddenApps.load(ctx)) if (!hidden.contains(pkg)) hidden.add(pkg);
+        // Remote buttons set on the TV come after the theme's app_keys, so they win; a remapped Settings
+        // button stops opening Settings.
+        List<String> ownerKeys = RemoteButtons.appKeys(ctx);
+        if (!ownerKeys.isEmpty()) {
+            appKeys.addAll(ownerKeys);
+            List<Integer> keep = new ArrayList<>();
+            for (int code : settingsKeycodes) {
+                boolean remapped = false;
+                for (String entry : ownerKeys) if (entry.startsWith(code + ":")) remapped = true;
+                if (!remapped) keep.add(code);
+            }
+            settingsKeycodes = new int[keep.size()];
+            for (int i = 0; i < keep.size(); i++) settingsKeycodes[i] = keep.get(i);
+        }
         Config made = new Config(dock, fillDock, hidden, libraryApps, libraryExcludedApps, liveTv, liveTvAction, liveTvInputId, packageMap(launchActions), packageMap(appLabels),
                 packageMap(appBanners), panelService, panelAction, panelExtra, coocaaSources, inputAction, inputSources, inputUriScheme, Math.max(1, columns),
                 Math.max(0, rowsBelow), animations, advancedEffects, shamsi, greetingName, moduleCards, reducedMotion, bootToLiveTv,

@@ -129,6 +129,12 @@
             android:text="@string/screensaver_preview" />
 
         <TextView
+            android:id="@+id/remoteButtonsChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="28dp"
+            android:text="@string/remote_buttons" />
+
+        <TextView
             android:id="@+id/wallpaperChoice"
             style="@style/SettingsRow"
             android:layout_marginTop="28dp" />

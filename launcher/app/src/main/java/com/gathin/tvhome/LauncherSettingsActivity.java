@@ -157,6 +157,8 @@ public final class LauncherSettingsActivity extends Activity {
             if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) { stepScreensaver(-1); return true; }
             return false;
         });
+        findViewById(R.id.remoteButtonsChoice).setOnClickListener(v ->
+                open(new Intent(this, RemoteButtonsActivity.class)));
         findViewById(R.id.screensaverPreview).setOnClickListener(v ->
                 open(new Intent(this, ClockActivity.class)));
         wallpaperChoice = findViewById(R.id.wallpaperChoice);

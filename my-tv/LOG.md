@@ -53,3 +53,8 @@ guards in `disable.sh`; main risks are third-party add-ons and the AI-driven ins
   `settings put secure screensaver_components` (old value kept in backup/2026-11-06/screensaver-before.txt).
 * Bench, new launcher: Glow background p50 126 ms, jank 0.1%, launcher idle CPU 0%, PSS 25 MB. Aurora background:
   p50 36 ms, jank 21%, launcher idle CPU 15.7% while Home is showing (stops behind apps).
+* Remote buttons screen (Launcher settings): press a button, pick an app or action; saved after the theme's
+  app_keys, applied by HomeKeyService at once. Clock styles, Daylight/Ocean/Sunset backgrounds, Bluetooth state in
+  the sidebar. Aurora on Home after the fixes: ~8% launcher CPU, 48 MB (was ~16%, 111 MB).
+* Memory: the TV sits at 55-65% used. 2.4 GB total, ~0.5 GB kernel/firmware, then system, Google services
+  (Play Store, Assistant, keyboard, Play services ~0.4 GB) and apps Android keeps cached (YouTube 317 MB).

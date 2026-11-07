@@ -254,6 +254,8 @@ public class HomeKeyService extends AccessibilityService {
 
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
+        // Launcher settings > Remote buttons is waiting for a press: every key goes to it untouched.
+        if (RemoteButtons.capturing) return false;
         // power_on_home: the first key after power-on hands the TV to the user (power and wake keys don't count).
         if (powerOnUntil != 0 && event.getAction() == KeyEvent.ACTION_DOWN
                 && event.getKeyCode() != KeyEvent.KEYCODE_POWER && event.getKeyCode() != KeyEvent.KEYCODE_WAKEUP) {
@@ -359,6 +361,12 @@ public class HomeKeyService extends AccessibilityService {
     /** The settings menu offers Restart only while this helper is bound: it opens the system power menu. */
     static boolean canOpenPowerMenu() {
         return running != null;
+    }
+
+    /** Remote buttons changed on the TV: read app_keys again now, not at the next bind. */
+    static void reloadConfig() {
+        HomeKeyService service = running;
+        if (service != null) service.loadConfig();
     }
 
     /** The sleep timer's end: standby through the same global action as the "sleep" key word. False if unbound. */
