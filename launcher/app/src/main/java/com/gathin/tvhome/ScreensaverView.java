@@ -25,6 +25,9 @@ public final class ScreensaverView extends View {
     static final String AURORA = "aurora";
     static final String DUNES = "dunes";
     static final String RIPPLES = "ripples";
+    /** Still backgrounds for Home (home_background): drawn once, nothing keeps redrawing them. */
+    static final String MIDNIGHT = "midnight";
+    static final String GRAPHITE = "graphite";
 
     /** ~30 fps for the faster scenes; aurora changes so slowly that 20 fps looks the same. */
     private static final long FRAME_MS = 33L;
@@ -48,6 +51,10 @@ public final class ScreensaverView extends View {
     private float strength = 1f;
     private long startedAt;
     private boolean running;
+    /** Home runs the scenes slower than the screensaver, and darker so tiles stay readable. 0: the style's own. */
+    private long frameMs;
+    private int dim;
+    private RadialGradient stillGlowA, stillGlowB;
 
     public ScreensaverView(Context context) {
         this(context, null);
@@ -61,6 +68,13 @@ public final class ScreensaverView extends View {
 
     /** style is AURORA, DUNES or RIPPLES; strength (0..1) scales the aurora's brightness, e.g. under a clock. */
     void start(String style, float strength) {
+        start(style, strength, 0, 0);
+    }
+
+    /** frameMs 0 keeps the style's own rate; dim is a colour drawn over the scene (0 for none). */
+    void start(String style, float strength, long frameMs, int dim) {
+        this.frameMs = frameMs;
+        this.dim = dim;
         this.style = style;
         this.strength = strength;
         hueBuiltAt = -1;
@@ -78,6 +92,10 @@ public final class ScreensaverView extends View {
         return AURORA.equals(style) || DUNES.equals(style) || RIPPLES.equals(style);
     }
 
+    static boolean isStill(String style) {
+        return MIDNIGHT.equals(style) || GRAPHITE.equals(style);
+    }
+
     @Override
     protected void onDetachedFromWindow() {
         running = false;
@@ -88,6 +106,7 @@ public final class ScreensaverView extends View {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         sky = null;
+        stillGlowA = null;
     }
 
     @Override
@@ -100,9 +119,36 @@ public final class ScreensaverView extends View {
             case AURORA: drawAurora(canvas, w, h, t); break;
             case DUNES: drawDunes(canvas, w, h, t); break;
             case RIPPLES: drawRipples(canvas, w, h, t); break;
+            case MIDNIGHT:
+            case GRAPHITE:
+                drawStill(canvas, w, h);
+                return;   // still: drawn again only when the view is
             default: return;
         }
-        postInvalidateDelayed(AURORA.equals(style) ? AURORA_FRAME_MS : FRAME_MS);
+        if (dim != 0) canvas.drawColor(dim);
+        postInvalidateDelayed(frameMs > 0 ? frameMs : AURORA.equals(style) ? AURORA_FRAME_MS : FRAME_MS);
+    }
+
+    /** A still backdrop in the spirit of Apple TV's: a deep gradient with two soft pools of light. */
+    private void drawStill(Canvas canvas, int w, int h) {
+        boolean midnight = MIDNIGHT.equals(style);
+        if (stillGlowA == null) {
+            sky = new LinearGradient(0, 0, w * 0.3f, h, midnight
+                    ? new int[]{0xFF0B1230, 0xFF121A44, 0xFF070914}
+                    : new int[]{0xFF26272B, 0xFF1A1B1E, 0xFF0E0E10},
+                    null, Shader.TileMode.CLAMP);
+            stillGlowA = new RadialGradient(w * 0.22f, h * 0.18f, Math.max(w, h) * 0.55f,
+                    midnight ? 0x553A4FC8 : 0x33FFFFFF, 0x00000000, Shader.TileMode.CLAMP);
+            stillGlowB = new RadialGradient(w * 0.85f, h * 0.95f, Math.max(w, h) * 0.5f,
+                    midnight ? 0x447A3FB8 : 0x22A0A4B0, 0x00000000, Shader.TileMode.CLAMP);
+        }
+        paint.setShader(sky);
+        canvas.drawRect(0, 0, w, h, paint);
+        paint.setShader(stillGlowA);
+        canvas.drawRect(0, 0, w, h, paint);
+        paint.setShader(stillGlowB);
+        canvas.drawRect(0, 0, w, h, paint);
+        paint.setShader(null);
     }
 
     private void drawAurora(Canvas canvas, int w, int h, long t) {

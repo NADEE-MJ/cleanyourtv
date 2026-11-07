@@ -45,6 +45,8 @@ public final class LauncherSettingsActivity extends Activity {
     private String clockFormat;
     private String screensaverStyle;
     private TextView screensaverChoice;
+    private String homeBackground;
+    private TextView backgroundChoice;
     private boolean animations;
     private boolean advancedEffects;
 
@@ -65,6 +67,7 @@ public final class LauncherSettingsActivity extends Activity {
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
         screensaverStyle = config.screensaverStyle;
+        homeBackground = config.homeBackground;
         animations = config.animations;
         advancedEffects = config.animations && config.advancedEffects;
 
@@ -126,6 +129,14 @@ public final class LauncherSettingsActivity extends Activity {
             reverseRow(dockChoices);
             reverseRow(clockChoices);
         }
+        backgroundChoice = findViewById(R.id.backgroundChoice);
+        backgroundChoice.setOnClickListener(v -> stepBackground(1));
+        backgroundChoice.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != android.view.KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) { stepBackground(1); return true; }
+            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) { stepBackground(-1); return true; }
+            return false;
+        });
         screensaverChoice = findViewById(R.id.screensaverChoice);
         // OK steps to the next style; Left/Right step either way while the row is focused.
         screensaverChoice.setOnClickListener(v -> stepScreensaver(1));
@@ -172,13 +183,14 @@ public final class LauncherSettingsActivity extends Activity {
             choices.edit().remove("columns").remove(Config.ROWS_BELOW_DOCK_KEY).remove("animations")
                     .remove("advanced_effects").remove(Config.WALLPAPER_CHOICE_KEY)
                     .remove(Config.DOCK_OPACITY_KEY).remove(Config.CLOCK_FORMAT_KEY).remove(Config.SCREENSAVER_STYLE_KEY)
-                    .remove(OpenOnStart.KEY).commit();
+                    .remove(Config.HOME_BACKGROUND_KEY).remove(OpenOnStart.KEY).commit();
             Config current = Config.load(this);
             columns = current.columns;
             rowsBelowDock = current.rowsBelowDock;
             dockOpacity = current.dockOpacity;
             clockFormat = current.clockFormat;
             screensaverStyle = current.screensaverStyle;
+            homeBackground = current.homeBackground;
             animations = current.animations;
             advancedEffects = current.animations && current.advancedEffects;
             changed();
@@ -201,6 +213,27 @@ public final class LauncherSettingsActivity extends Activity {
         choices.edit().putString(Config.SCREENSAVER_STYLE_KEY, screensaverStyle).apply();
         changed();
         refresh();
+    }
+
+    private void stepBackground(int direction) {
+        String[] all = Config.HOME_BACKGROUNDS;
+        int at = 0;
+        for (int i = 0; i < all.length; i++) if (all[i].equals(homeBackground)) at = i;
+        homeBackground = all[(at + direction + all.length) % all.length];
+        choices.edit().putString(Config.HOME_BACKGROUND_KEY, homeBackground).apply();
+        changed();
+        refresh();
+    }
+
+    private String backgroundLabel() {
+        switch (homeBackground) {
+            case ScreensaverView.AURORA: return getString(R.string.screensaver_aurora);
+            case ScreensaverView.DUNES: return getString(R.string.screensaver_dunes);
+            case ScreensaverView.RIPPLES: return getString(R.string.screensaver_ripples);
+            case ScreensaverView.MIDNIGHT: return getString(R.string.background_midnight);
+            case ScreensaverView.GRAPHITE: return getString(R.string.background_graphite);
+            default: return getString(R.string.background_glow);
+        }
     }
 
     private String screensaverLabel() {
@@ -341,6 +374,7 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < clockChoices.length; i++) {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
+        backgroundChoice.setText(getString(R.string.background_state, backgroundLabel()));
         screensaverChoice.setText(getString(R.string.screensaver_state, screensaverLabel()));
         animationsChoice.setText(getString(R.string.animations_state,
                 getString(animations ? R.string.on : R.string.off)));
@@ -362,6 +396,7 @@ public final class LauncherSettingsActivity extends Activity {
                 || choices.contains("animations") || choices.contains("advanced_effects")
                 || choices.contains(Config.WALLPAPER_CHOICE_KEY) || choices.contains(Config.DOCK_OPACITY_KEY)
                 || choices.contains(Config.CLOCK_FORMAT_KEY) || choices.contains(Config.SCREENSAVER_STYLE_KEY)
+                || choices.contains(Config.HOME_BACKGROUND_KEY)
                 || choices.contains(OpenOnStart.KEY);
     }
 

@@ -47,3 +47,9 @@ guards in `disable.sh`; main risks are third-party add-ons and the AI-driven ins
 * Fixed on the TV: the menu button stole Home's first focus; the aurora screensaver crashed on its first frame.
 * Checked by screenshot: Home, grid, sidebar, running apps, Drift clock + Aurora, folder open (test folder deleted after).
 * Connecting: this time even `/usr/bin/nc` got "No route to host" until the owner allowed Local Network for T3 Code.
+* Later the same evening: Inputs pill back, a memory pill (OK opens Running apps), names under tiles in folders and
+  Hidden apps, Home backgrounds (Glow, Aurora, Dunes, Ripples, Midnight, Graphite). TV screensaver switched from
+  Google Ambient mode (dreamx Backdrop) to `com.gathin.tvhome/.ClockDream` with
+  `settings put secure screensaver_components` (old value kept in backup/2026-11-06/screensaver-before.txt).
+* Bench, new launcher: Glow background p50 126 ms, jank 0.1%, launcher idle CPU 0%, PSS 25 MB. Aurora background:
+  p50 36 ms, jank 21%, launcher idle CPU 15.7% while Home is showing (stops behind apps).

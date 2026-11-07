@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The memory pill (sidebar on): a memory chip. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp" android:height="22dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M3,7h18a1,1 0,0 1,1 1v8a1,1 0,0 1,-1 1H3a1,1 0,0 1,-1 -1V8a1,1 0,0 1,1 -1z M5,9.5v5h2v-5z M9,9.5v5h2v-5z M13,9.5v5h2v-5z M17,9.5v5h2v-5z M5,17.5h1.6v2.2H5z M9,17.5h1.6v2.2H9z M13.4,17.5H15v2.2h-1.6z M17.4,17.5H19v2.2h-1.6z" />
+</vector>

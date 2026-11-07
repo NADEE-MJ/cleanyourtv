@@ -113,6 +113,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
     private boolean rtlAppGrid;
     private static final long MINUTE_MS = 60_000L;
     private static final long STATS_MS = 10_000L;
+    private static final long CHIP_MS = 3_000L;
     /**
      * 2025-01-01. TVs without a clock battery boot at the epoch (08:00 in China) and keep it until network
      * time arrives; the clock, date and greeting stay hidden before then.
@@ -149,8 +150,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
     private FolderPanel folderPanel;
     /** The open FolderPanel shows the hidden apps (OK puts one back) rather than a folder. */
     private boolean hiddenPanelOpen;
-    /** sidebar: CPU and memory at the top right, in place of the Inputs, Wi-Fi and Settings pills. */
+    /** sidebar: a memory pill at the top right in place of Wi-Fi and Settings; OK opens Running apps. */
     private TextView statsChip;
+    /** home_background: the scene or still gradient behind Home, or null for the glow. */
+    private ScreensaverView homeScene;
+    private String homeBackground = "glow";
     private boolean sidebarOn;
     private View btnSidebar;
     private WallpaperPlayer wallpaperPlayer;
@@ -529,6 +533,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         ambientGlow = cfg.ambientGlow;
         glowSnap = cfg.glowSnap;
         appGlow = cfg.appGlow;
+        homeBackground = cfg.homeBackground;
+        if (!"glow".equals(homeBackground)) {
+            homeScene = findViewById(R.id.homeScene);
+            // A moving scene replaces the glow (both repainting the screen would cost twice); a still one keeps it.
+            if (ScreensaverView.isScene(homeBackground)) ambientGlow = false;
+        }
         if (!ambientGlow) ambient.setVisibility(View.GONE);
         heroName = findViewById(R.id.heroName);
         hero = findViewById(R.id.hero);
@@ -917,22 +927,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             topButtons.setGravity(Gravity.CENTER_VERTICAL);
         }
         if (sidebarOn) {
-            // Inputs, Wi-Fi and Settings live in the sidebar; the top right shows CPU and memory instead.
-            showInputsPill = false;
-            btnInputs.setVisibility(View.GONE);
+            // Wi-Fi and Settings live in the sidebar; Inputs keeps its pill, and a memory pill takes the right.
             btnWifi.setVisibility(View.GONE);
             btnSettings.setVisibility(View.GONE);
-            statsChip = new TextView(this);
-            statsChip.setTextColor(0xB3FFFFFF);
-            statsChip.setTextSize(15);
-            statsChip.setTypeface(android.graphics.Typeface.create(getString(R.string.font_medium), android.graphics.Typeface.NORMAL));
-            statsChip.setLetterSpacing(0.04f);
-            statsChip.setGravity(Gravity.CENTER_VERTICAL);
-            statsChip.setFocusable(false);
+            statsChip = new TextView(this, null, 0, R.style.TopButton);
+            statsChip.setId(View.generateViewId());
+            statsChip.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_memory, 0, 0, 0);
             statsChip.setSingleLine(true);
             statsChip.setFontFeatureSettings("tnum");
-            ((LinearLayout) findViewById(R.id.topButtons)).addView(statsChip, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, (int) (42 * density)));
+            statsChip.setText(R.string.memory_pill_waiting);
+            statsChip.setOnClickListener(v -> open(new Intent(this, RunningAppsActivity.class)));
+            LinearLayout.LayoutParams chipLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, (int) (42 * density));
+            chipLp.setMarginStart((int) (10 * density));
+            ((LinearLayout) findViewById(R.id.topButtons)).addView(statsChip, chipLp);
         }
         if (iconOnlyButtons) {
             if (cfg.wifiLabelWidth > 0) btnWifi.setMaxWidth(Math.round(cfg.wifiLabelWidth * density));
@@ -964,7 +972,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             }
             int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : firstTopButton().getId();
             int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
-            int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
+            int lastButton = statsChip != null ? statsChip.getId() : R.id.btnSettings;
+            int rightButton = rtlMenuBar ? firstButton : lastButton;
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
                 if (v.getId() != leftButton) return false;
                 if (sidebarOn && !rtlMenuBar) {   // the menu button is left of the pills
@@ -979,6 +988,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         btnWifi.setOnKeyListener(pillKeys);
         btnVpn.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
+        if (statsChip != null) statsChip.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
         btnLibraryTop.setOnKeyListener(pillKeys);
         for (View button : topAppButtons) button.setOnKeyListener(pillKeys);
@@ -1212,6 +1222,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             pillsShown = true;
         }
         if (showStats || statsChip != null) startStats();
+        if (homeScene != null) {
+            // Slower and darker than the screensaver: Home is read, not watched.
+            boolean ripples = ScreensaverView.RIPPLES.equals(homeBackground);
+            homeScene.start(homeBackground, ScreensaverView.AURORA.equals(homeBackground) ? 0.7f : 1f,
+                    ripples ? 50L : 66L, ScreensaverView.DUNES.equals(homeBackground) ? 0x73000000 : 0);
+        }
         if (gameDay != null) gameDay.start();
         sky.update();
         wallpaperPlayer.start();
@@ -1382,6 +1398,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
     protected void onPause() {
         super.onPause();
         resumed = false;
+        if (homeScene != null) homeScene.stop();   // nothing redraws behind an app
         // No UP reaches a paused Home, so a vendor-key hold it saw go down would still open its app later.
         // Only Home's own share is dropped: a key service that saw the same DOWN keeps its hold.
         RemoteKeys.release(this);
@@ -2352,7 +2369,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
                     if (showStats && stats != null) stats.setText(line);
                     else if (statsChip != null) statsChip.setText(line);
                 });
-                if (statsBg == bg) bg.postDelayed(this, STATS_MS);
+                // The memory pill is a glance at the TV right now; the stats line under the clock is quieter.
+                if (statsBg == bg) bg.postDelayed(this, showStats ? STATS_MS : CHIP_MS);
             }
         });
     }
@@ -2409,10 +2427,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             cpu = cpuPercent();
         }
         StringBuilder line = new StringBuilder();
-        if (cpu >= 0) line.append(getString(R.string.stats_cpu, cpu));
         long[] mem = memUsedOfTotalMb();
-        if (mem != null && mem[1] > 0) appendStat(line, getString(R.string.stats_memory_percent,
+        if (mem != null && mem[1] > 0) line.append(getString(R.string.stats_memory_percent,
                 (int) Math.round(mem[0] * 100.0 / mem[1])));
+        if (cpu >= 0) appendStat(line, getString(R.string.stats_cpu, cpu));   // where the TV lets apps read it
         return line.toString();
     }
 
@@ -2562,7 +2580,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             if (position < COLUMNS) {
-                if (!sidebarOn) return false;              // dock row: let focus move to the top bar
+                if (!sidebarOn || btnInputs.getVisibility() == View.VISIBLE) return false;   // up to the pills
                 btnSidebar.setFocusable(true);             // the pills are gone: Up reaches the menu button
                 btnSidebar.requestFocus();
                 return true;
@@ -2822,7 +2840,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
 
     private List<Sidebar.Row> sidebarRows() {
         List<Sidebar.Row> rows = new ArrayList<>();
-        rows.add(new Sidebar.Row(getString(R.string.inputs), null, this::showInputs, false));
         rows.add(new Sidebar.Row(getString(R.string.settings), null,
                 () -> open(systemIntent(Settings.ACTION_SETTINGS)), false));
         // The Wi-Fi pill is hidden but keeps its label current: the network's name, or its state.
@@ -3547,7 +3564,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         // Read the switch, not the pill: show_inputs_pill=false hides the pill too, and there the list
         // keeps its usual place.
         boolean underGear = topMenu;
-        View anchor = sidebarOn ? btnSidebar : findViewById(underGear ? R.id.btnSettings : R.id.btnInputs);
+        View anchor = findViewById(underGear ? R.id.btnSettings : R.id.btnInputs);
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
 
@@ -3736,8 +3753,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max(width, Math.min(panel.getMeasuredWidth(), (int) (360 * density))));
 
-        int alignment = sidebarOn ? Gravity.START
-                : getResources().getBoolean(R.bool.rtl_menu_bar) != underGear ? Gravity.END : Gravity.START;
+        int alignment = getResources().getBoolean(R.bool.rtl_menu_bar) != underGear ? Gravity.END : Gravity.START;
         dropIn(popup, panel, anchor, alignment);
         for (int i = 0; i < rows.getChildCount(); i++) {
             View child = rows.getChildAt(i);

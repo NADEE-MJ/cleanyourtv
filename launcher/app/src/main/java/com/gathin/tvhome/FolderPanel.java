@@ -43,7 +43,6 @@ final class FolderPanel {
     private final float density;
     private FrameLayout overlay;
     private LinearLayout panel;
-    private TextView focusedName;
     private final List<View> tiles = new ArrayList<>();
     private AppAdapter.Entry folder;
     private Runnable onClosed;
@@ -100,7 +99,7 @@ final class FolderPanel {
         panel.addView(head);
 
         boolean fourRows = folder.members.size() > Folders.MAX_APPS;
-        int tileW = dp(fourRows ? 140 : 176), tileH = Math.round(tileW * 0.5625f), gap = dp(fourRows ? 16 : 22);
+        int tileW = dp(fourRows ? 128 : 176), tileH = Math.round(tileW * 0.5625f), gap = dp(fourRows ? 16 : 22);
         tiles.clear();
         LinearLayout row = null;
         for (int i = 0; i < folder.members.size(); i++) {
@@ -110,23 +109,32 @@ final class FolderPanel {
                 row.setClipChildren(false);
                 LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                rlp.topMargin = i == 0 ? dp(22) : gap;
+                rlp.topMargin = i == 0 ? dp(22) : dp(4);
                 panel.addView(row, rlp);
             }
-            View t = tile(folder.members.get(i), i);
-            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(tileW, tileH);
-            if (i % COLS != 0) tlp.leftMargin = gap;
-            row.addView(t, tlp);
+            // Each tile with its name under it, shown while it has focus, as on the Home grid.
+            LinearLayout cell = new LinearLayout(activity);
+            cell.setOrientation(LinearLayout.VERTICAL);
+            cell.setGravity(Gravity.CENTER_HORIZONTAL);
+            cell.setClipChildren(false);
+            TextView name = new TextView(activity);
+            name.setText(folder.members.get(i).label);
+            name.setTextColor(0xF2FFFFFF);
+            name.setTextSize(fourRows ? 13 : 15);
+            name.setTypeface(Typeface.create(activity.getString(R.string.font_medium), Typeface.NORMAL));
+            name.setSingleLine(true);
+            name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            name.setGravity(Gravity.CENTER_HORIZONTAL);
+            name.setAlpha(0f);
+            cell.addView(tile(folder.members.get(i), i, name), new LinearLayout.LayoutParams(tileW, tileH));
+            LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(tileW, ViewGroup.LayoutParams.WRAP_CONTENT);
+            nlp.topMargin = dp(fourRows ? 8 : 12);
+            cell.addView(name, nlp);
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            if (i % COLS != 0) clp.leftMargin = gap;
+            row.addView(cell, clp);
         }
-        focusedName = new TextView(activity);
-        focusedName.setTextColor(0xE6FFFFFF);
-        focusedName.setTextSize(17);
-        focusedName.setTypeface(Typeface.create(activity.getString(R.string.font_medium), Typeface.NORMAL));
-        focusedName.setSingleLine(true);
-        LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        nlp.topMargin = dp(18);
-        panel.addView(focusedName, nlp);
         if (hint != null) {
             TextView h = new TextView(activity);
             h.setText(hint);
@@ -135,7 +143,7 @@ final class FolderPanel {
             h.setTypeface(Typeface.create(activity.getString(R.string.font_medium), Typeface.NORMAL));
             LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            hlp.topMargin = dp(4);
+            hlp.topMargin = dp(10);
             panel.addView(h, hlp);
         }
         panel.setClipChildren(false);
@@ -178,7 +186,7 @@ final class FolderPanel {
         gone.animate().alpha(0f).setDuration(FADE_MS - 40).withEndAction(finish).start();
     }
 
-    private View tile(AppAdapter.Entry app, int index) {
+    private View tile(AppAdapter.Entry app, int index, TextView name) {
         FrameLayout card = new FrameLayout(activity);
         card.setFocusable(true);
         card.setClipToOutline(true);
@@ -209,7 +217,7 @@ final class FolderPanel {
             v.setForeground(has ? ring : null);
             v.animate().scaleX(has ? 1.08f : 1f).scaleY(has ? 1.08f : 1f).translationZ(has ? dp(10) : 0)
                     .setDuration(150).start();
-            if (has) focusedName.setText(app.label);
+            name.animate().alpha(has ? 1f : 0f).setDuration(150).start();
         });
         card.setOnKeyListener((v, keyCode, event) -> onKey(index, app, v, keyCode, event));
         tiles.add(card);

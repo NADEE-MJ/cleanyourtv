@@ -163,6 +163,11 @@
     <string name="hidden_apps_none">אין אפליקציות מוסתרות. לחצו לחיצה ארוכה על OK באפליקציה ובחרו הסתרה.</string>
     <string name="tile_hide">הסתרה</string>
     <string name="stats_memory_percent">זיכרון %1$d%%</string>
+    <string name="memory_pill_waiting">זיכרון</string>
+    <string name="background_state">רקע: %1$s</string>
+    <string name="background_glow">זוהר האפליקציה</string>
+    <string name="background_midnight">חצות</string>
+    <string name="background_graphite">גרפיט</string>
     <string name="hidden_apps_hint">OK מחזיר אפליקציה למסך הבית. לחיצה ארוכה על OK פותחת אותה.</string>
     <string name="hidden_apps_restored">%1$s חזרה למסך הבית</string>
     <string name="hidden_apps_open">פתיחה</string>

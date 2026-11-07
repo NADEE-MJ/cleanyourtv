@@ -45,6 +45,10 @@ final class Config {
     static final String DOCK_OPACITY_KEY = "dock_opacity";
     static final String CLOCK_FORMAT_KEY = "clock_format";
     static final String SCREENSAVER_STYLE_KEY = "screensaver_style";
+    static final String HOME_BACKGROUND_KEY = "home_background";
+    /** home_background values, in the order Launcher settings cycles through them. */
+    static final String[] HOME_BACKGROUNDS = {"glow", ScreensaverView.AURORA, ScreensaverView.DUNES,
+            ScreensaverView.RIPPLES, ScreensaverView.MIDNIGHT, ScreensaverView.GRAPHITE};
     /**
      * Counts the changes made in Launcher settings. Home remembers the count it was built with and rebuilds on
      * resume when it differs, however the settings were left (see MainActivity#onResume).
@@ -278,6 +282,8 @@ final class Config {
     final boolean clockGlow;
     /** screensaver_style (config.xml, theme, or Launcher settings); one of ClockScene.STYLES. Set by load(). */
     String screensaverStyle = ClockScene.STYLE_DRIFT_CLOCK;
+    /** home_background (config.xml, theme, or Launcher settings); one of HOME_BACKGROUNDS. Set by load(). */
+    String homeBackground = "glow";
     /** sidebar (config.xml or theme): the overlay menu on Home. Set by load(). */
     boolean sidebar;
     /** Every app in the dock's row, which scrolls sideways, and no grid below it (config.xml, single_row); needs dock_row. */
@@ -731,6 +737,10 @@ final class Config {
         if (json != null) style = string(json, SCREENSAVER_STYLE_KEY, style);
         style = choices.getString(SCREENSAVER_STYLE_KEY, style);
         made.screensaverStyle = ClockScene.validStyle(style) ? style : ClockScene.STYLE_DRIFT_CLOCK;
+        String homeBg = res.getString(R.string.home_background);
+        if (json != null) homeBg = string(json, HOME_BACKGROUND_KEY, homeBg);
+        homeBg = choices.getString(HOME_BACKGROUND_KEY, homeBg);
+        made.homeBackground = Arrays.asList(HOME_BACKGROUNDS).contains(homeBg) ? homeBg : "glow";
         made.sidebar = json == null ? res.getBoolean(R.bool.sidebar) : bool(json, "sidebar", res.getBoolean(R.bool.sidebar));
         return made;
     }
@@ -776,12 +786,12 @@ final class Config {
             SharedPreferences.Editor editor = choices.edit();
             if (!"absent".equals(token)) editor.remove("columns").remove("animations")
                     .remove("advanced_effects").remove(ROWS_BELOW_DOCK_KEY).remove(WALLPAPER_CHOICE_KEY)
-                    .remove(DOCK_OPACITY_KEY).remove(CLOCK_FORMAT_KEY).remove(SCREENSAVER_STYLE_KEY);
+                    .remove(DOCK_OPACITY_KEY).remove(CLOCK_FORMAT_KEY).remove(SCREENSAVER_STYLE_KEY).remove(HOME_BACKGROUND_KEY);
             editor.putString(THEME_SIGNATURE_KEY, signature).commit();
         } else if (!seen.equals(signature)) {
             choices.edit().remove("columns").remove("animations").remove("advanced_effects")
                     .remove(ROWS_BELOW_DOCK_KEY).remove(WALLPAPER_CHOICE_KEY).remove(DOCK_OPACITY_KEY)
-                    .remove(CLOCK_FORMAT_KEY).remove(SCREENSAVER_STYLE_KEY).putString(THEME_SIGNATURE_KEY, signature).commit();
+                    .remove(CLOCK_FORMAT_KEY).remove(SCREENSAVER_STYLE_KEY).remove(HOME_BACKGROUND_KEY).putString(THEME_SIGNATURE_KEY, signature).commit();
         }
     }
 

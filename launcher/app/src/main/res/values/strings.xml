@@ -169,6 +169,11 @@
     <string name="hidden_apps_none">No hidden apps. Hold OK on an app and choose Hide.</string>
     <string name="tile_hide">Hide</string>
     <string name="stats_memory_percent">Memory %1$d%%</string>
+    <string name="memory_pill_waiting">Memory</string>
+    <string name="background_state">Background: %1$s</string>
+    <string name="background_glow">Glow</string>
+    <string name="background_midnight">Midnight</string>
+    <string name="background_graphite">Graphite</string>
     <string name="hidden_apps_hint">OK puts an app back on Home. Hold OK to open it.</string>
     <string name="hidden_apps_restored">%1$s is back on Home</string>
     <string name="hidden_apps_open">Open</string>
