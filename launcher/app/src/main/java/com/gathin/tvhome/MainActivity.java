@@ -2827,6 +2827,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         grid.smoothScrollToPosition(pos);
     }
 
+    /**
+     * The TV's Remotes & accessories page, where Bluetooth is switched and paired. Android TV settings answers
+     * ACCESSORIES_CONNECTED_DEVICES (TCL's own page on this TV); the standard Bluetooth action has no page on it.
+     */
+    private Intent bluetoothIntent() {
+        Intent accessories = new Intent("com.android.tv.settings.ACCESSORIES_CONNECTED_DEVICES");
+        if (getPackageManager().resolveActivity(accessories, 0) != null) return accessories;
+        Intent bluetooth = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
+        if (getPackageManager().resolveActivity(bluetooth, 0) != null) return bluetooth;
+        return systemIntent(Settings.ACTION_SETTINGS);
+    }
+
     /** A moving scene replaces the glow (both repainting the screen would cost twice); a still one keeps it.
      *  Daylight is Apple TV's pale backdrop: the app's colour over it turned it pink, so it goes too. */
     private static boolean replacesGlow(String background) {
@@ -2913,7 +2925,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             android.bluetooth.BluetoothAdapter bt = bm == null ? null : bm.getAdapter();
             if (bt == null) return "";
             return getString(bt.isEnabled() ? R.string.on : R.string.off);
-        }, () -> open(systemIntent(Settings.ACTION_BLUETOOTH_SETTINGS)), false));
+        }, () -> open(bluetoothIntent()), false));
         rows.add(new Sidebar.Row(getString(R.string.running_apps), null,
                 () -> open(new Intent(this, RunningAppsActivity.class)), false));
         rows.add(new Sidebar.Row(getString(R.string.sleep_timer), () -> {
