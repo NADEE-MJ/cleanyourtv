@@ -35,3 +35,15 @@ guards in `disable.sh`; main risks are third-party add-ons and the AI-driven ins
 * Projectivy launcher is still installed (unused). Remove it, or keep as a fallback.
 * Google Assistant (`katniss`) kept; revisit if the TV feels slow.
 * Next: launcher UI rewrite, in its own session: see `prompts/ui-rewrite.md`.
+
+## 2026-11-06 (evening): launcher UI revamp, first install (branch `ui-rewrite`)
+
+* Built the design in `my-tv/ui/DESIGN.md`: screensaver styles, Home glides to the top, sidebar, folders (12 max),
+  hidden apps, sleep timer, running apps. Theme now sets `sidebar`, 6 columns, `app_glow`, `dock_glass`,
+  `screensaver_style: drift_clock_aurora`, `home_idle_clock_minutes: 10`.
+* Baseline bench before install (old launcher): key response p50 122 ms, 0% jank, cold start p50 489 ms, PSS 27 MB.
+* Installed with `HOME_KEY_SERVICE=1 launcher/build-and-install.sh`, pushed `my-tv/theme`, granted
+  `appops set com.gathin.tvhome GET_USAGE_STATS allow`.
+* Fixed on the TV: the menu button stole Home's first focus; the aurora screensaver crashed on its first frame.
+* Checked by screenshot: Home, grid, sidebar, running apps, Drift clock + Aurora, folder open (test folder deleted after).
+* Connecting: this time even `/usr/bin/nc` got "No route to host" until the owner allowed Local Network for T3 Code.

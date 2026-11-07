@@ -826,6 +826,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         folderPanel = new FolderPanel(this, root, this);
         btnSidebar = findViewById(R.id.btnSidebar);
         btnSidebar.setVisibility(sidebarOn ? View.VISIBLE : View.GONE);
+        // Focusable only while Left from the pills brings focus to it: as the first button in the layout it
+        // would otherwise take Home's initial focus away from the first app.
+        btnSidebar.setFocusable(false);
+        btnSidebar.setOnFocusChangeListener((v, has) -> {
+            if (!has) v.setFocusable(false);
+        });
         btnSidebar.setOnClickListener(v -> openSidebar(() -> btnSidebar.requestFocus()));
         btnSidebar.setOnKeyListener((v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
@@ -935,7 +941,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
                 if (v.getId() != leftButton) return false;
-                if (sidebarOn && !rtlMenuBar) btnSidebar.requestFocus();   // the menu button is left of the pills
+                if (sidebarOn && !rtlMenuBar) {   // the menu button is left of the pills
+                    btnSidebar.setFocusable(true);
+                    btnSidebar.requestFocus();
+                }
                 return true;
             }
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;

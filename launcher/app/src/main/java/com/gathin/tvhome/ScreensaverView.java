@@ -43,7 +43,7 @@ public final class ScreensaverView extends View {
     private final PorterDuffXfermode add = new PorterDuffXfermode(PorterDuff.Mode.ADD);
     private final float[] hsv = new float[3];
     private LinearGradient sky;
-    private long hueBuiltAt = Long.MIN_VALUE;
+    private long hueBuiltAt = -1;   // -1: not built yet
     private String style;
     private float strength = 1f;
     private long startedAt;
@@ -63,7 +63,7 @@ public final class ScreensaverView extends View {
     void start(String style, float strength) {
         this.style = style;
         this.strength = strength;
-        hueBuiltAt = Long.MIN_VALUE;
+        hueBuiltAt = -1;
         startedAt = SystemClock.uptimeMillis();
         running = true;
         setVisibility(VISIBLE);
@@ -107,7 +107,7 @@ public final class ScreensaverView extends View {
 
     private void drawAurora(Canvas canvas, int w, int h, long t) {
         canvas.drawColor(0xFF04060C);
-        if (t - hueBuiltAt >= HUE_STEP_MS) {
+        if (hueBuiltAt < 0 || t - hueBuiltAt >= HUE_STEP_MS) {
             hueBuiltAt = t;
             int alpha = Math.round(128 * strength);
             for (int i = 0; i < BLOBS; i++) {
