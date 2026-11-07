@@ -279,6 +279,16 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:baselineAligned="true">
+                        <!-- The sidebar's menu button (sidebar); hidden unless a theme turns the sidebar on. -->
+                        <TextView
+                            android:id="@+id/btnSidebar"
+                            style="@style/TopButtonIcon"
+                            android:layout_marginStart="0dp"
+                            android:layout_marginEnd="18dp"
+                            android:layout_gravity="center_vertical"
+                            android:drawableStart="@drawable/ic_sidebar"
+                            android:contentDescription="@string/sidebar_title"
+                            android:visibility="gone" />
                         <TextClock
                             android:id="@+id/ampm"
                             android:layout_width="wrap_content"

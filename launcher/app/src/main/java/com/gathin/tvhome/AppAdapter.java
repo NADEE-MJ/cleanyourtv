@@ -63,10 +63,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         void onLibraryUp();
         /** A tile whose launch_actions entry is "input:<id>": switch to that TV input instead of opening an app. */
         void onOpenInput(String inputId);
+        /** OK on a folder tile: the activity opens the folder over the grid. */
+        void onOpenFolder(Entry folder);
     }
 
     static final class Entry {
-        static final int APP = 0, HOME_SETTINGS = 1, CARD = 2, EMPTY = 3;
+        static final int APP = 0, HOME_SETTINGS = 1, CARD = 2, EMPTY = 3, FOLDER = 4;
 
         final int kind;
         final String label;
@@ -80,6 +82,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         int ambient;
         /** uniform_tiles card fill, top and bottom colour; null until sampled from the icon. */
         int[] backdrop;
+        /** FOLDER only: its id and the apps in it, in the folder's order. */
+        String folderId;
+        List<Entry> members;
 
         Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
             this(APP, label, component, banner, icon, null, 0);
@@ -198,6 +203,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private int docked, emptySlots;
     /** Never shown as tiles (res/values/config.xml, hidden_apps). */
     private final Set<String> hidden;
+
+    /** The tile menu's Hide and the Hidden apps list: takes effect at the next reload. */
+    void setHidden(String pkg, boolean hide) {
+        if (hide) hidden.add(pkg);
+        else hidden.remove(pkg);
+    }
     /** Apps pre-seeded into the App library's "added" set (config.xml library_apps); empty by default. */
     private final Set<String> libraryPreload;
     private final boolean animations;
@@ -311,6 +322,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 fresh.add(new Entry(label, component, banner, icon));
             }
         }
+        applyFolders(fresh);
         Collections.sort(fresh, (a, b) -> {
             // The owner's own order first; tiles it does not know (new installs) follow by the rule below.
             int saved = Order.compare(savedRanks, a.component.flattenToShortString(), b.component.flattenToShortString());
@@ -343,6 +355,54 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         items.clear();
         items.addAll(fresh);
         notifyDataSetChanged();
+    }
+
+    /**
+     * Folders (Folders): takes each folder's apps off the grid and puts one folder tile in their place, which sorts
+     * like any tile by its stable key. A folder whose apps are all gone (uninstalled, hidden) shows no tile.
+     */
+    private void applyFolders(List<Entry> fresh) {
+        List<Folders.Folder> folders = Folders.load(ctx);
+        if (folders.isEmpty()) return;
+        Map<String, Entry> byPkg = new HashMap<>();
+        for (Entry e : fresh) if (e.kind == Entry.APP) byPkg.put(e.pkg, e);
+        int n = 0;
+        for (Folders.Folder f : folders) {
+            n++;
+            List<Entry> members = new ArrayList<>();
+            List<Drawable> art = new ArrayList<>();
+            for (String pkg : f.apps) {
+                Entry m = byPkg.remove(pkg);
+                if (m == null) continue;
+                fresh.remove(m);
+                members.add(m);
+                art.add(m.banner != null ? m.banner : m.icon);
+            }
+            if (members.isEmpty()) continue;
+            String name = f.name.isEmpty() ? ctx.getString(R.string.folder_default_name, n) : f.name;
+            Entry tile = new Entry(Entry.FOLDER, name, new ComponentName(ctx.getPackageName(), Folders.KEY_PREFIX + f.id),
+                    new Folders.TileDrawable(art), null, null, 0xFF6E6A78);
+            tile.folderId = f.id;
+            tile.members = members;
+            fresh.add(tile);
+        }
+    }
+
+    /** The kind of tile at position (Entry.APP, FOLDER, ...), or -1 past the end. */
+    int kindAt(int position) {
+        return position < 0 || position >= items.size() ? -1 : items.get(position).kind;
+    }
+
+    /** The folder tile at position, or null. */
+    Entry folderAt(int position) {
+        if (position < 0 || position >= items.size()) return null;
+        Entry e = items.get(position);
+        return e.kind == Entry.FOLDER ? e : null;
+    }
+
+    /** Opens an app from a folder the way its tile would. */
+    void launchEntry(Entry e) {
+        launch(e);
     }
 
     /** icon_tiles: the app's icon centred on a dark banner-shaped tile, for apps whose own banner crops badly. */
@@ -528,6 +588,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** Opens the tile's activity by explicit component, with no extras: a card can name nothing else. */
     @SuppressWarnings("deprecation")
     private void launch(Entry e) {
+        if (e.kind == Entry.FOLDER) {
+            listener.onOpenFolder(e);
+            return;
+        }
         if (e.kind == Entry.HOME_SETTINGS) {
             ctx.startActivity(new Intent(ctx, HomeSettingsActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));

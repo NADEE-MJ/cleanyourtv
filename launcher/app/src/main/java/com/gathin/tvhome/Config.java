@@ -278,6 +278,8 @@ final class Config {
     final boolean clockGlow;
     /** screensaver_style (config.xml, theme, or Launcher settings); one of ClockScene.STYLES. Set by load(). */
     String screensaverStyle = ClockScene.STYLE_DRIFT_CLOCK;
+    /** sidebar (config.xml or theme): the overlay menu on Home. Set by load(). */
+    boolean sidebar;
     /** Every app in the dock's row, which scrolls sideways, and no grid below it (config.xml, single_row); needs dock_row. */
     final boolean singleRow;
     /** With single_row, the band runs behind every app in the row, not only the dock apps (config.xml, dock_band_all). */
@@ -709,6 +711,7 @@ final class Config {
         Festival festival = json == null ? Festival.NONE : Festival.parse(festivalName(json),
                 string(json, "festival_until", ""), string(json, "greeting", ""), string(json, "accent_color", ""));
 
+        for (String pkg : HiddenApps.load(ctx)) if (!hidden.contains(pkg)) hidden.add(pkg);
         Config made = new Config(dock, fillDock, hidden, libraryApps, libraryExcludedApps, liveTv, liveTvAction, liveTvInputId, packageMap(launchActions), packageMap(appLabels),
                 packageMap(appBanners), panelService, panelAction, panelExtra, coocaaSources, inputAction, inputSources, inputUriScheme, Math.max(1, columns),
                 Math.max(0, rowsBelow), animations, advancedEffects, shamsi, greetingName, moduleCards, reducedMotion, bootToLiveTv,
@@ -728,6 +731,7 @@ final class Config {
         if (json != null) style = string(json, SCREENSAVER_STYLE_KEY, style);
         style = choices.getString(SCREENSAVER_STYLE_KEY, style);
         made.screensaverStyle = ClockScene.validStyle(style) ? style : ClockScene.STYLE_DRIFT_CLOCK;
+        made.sidebar = json == null ? res.getBoolean(R.bool.sidebar) : bool(json, "sidebar", res.getBoolean(R.bool.sidebar));
         return made;
     }
 

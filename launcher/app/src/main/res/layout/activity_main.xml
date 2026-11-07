@@ -205,6 +205,17 @@
                     android:orientation="horizontal"
                     android:baselineAligned="true">
 
+                    <!-- Opens the sidebar (Left on the grid's first column does too). Hidden unless sidebar is on. -->
+                    <TextView
+                        android:id="@+id/btnSidebar"
+                        style="@style/TopButtonIcon"
+                        android:layout_marginStart="0dp"
+                        android:layout_marginEnd="18dp"
+                        android:layout_gravity="center_vertical"
+                        android:drawableStart="@drawable/ic_sidebar"
+                        android:contentDescription="@string/sidebar_title"
+                        android:visibility="gone" />
+
                     <TextClock
                         android:id="@+id/clock"
                         android:layout_width="wrap_content"

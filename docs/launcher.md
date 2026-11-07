@@ -56,6 +56,8 @@ The launcher's own page has these rows, top to bottom:
   its own row (`dock_row`, on by default).
 - **Clock**: **System** follows the TV's 12- or 24-hour setting; **12-hour** or **24-hour** sets the launcher's
   clocks (Home and the clock screensaver) to that, whatever the TV uses (`clock_format` in a theme).
+- **Screensaver**: OK, Left or Right steps through Drift clock, Drift clock + Aurora, Aurora, Dunes and Ripples
+  (`screensaver_style` in a theme); **Preview screensaver** shows the one chosen.
 - **Wallpaper**: one picture from the theme's collection (or its `wallpaper.jpg`), **None**, or **Theme
   default**. A pick holds that picture and stops the rotation until you choose Theme default, press
   Follow theme, or push the theme again.

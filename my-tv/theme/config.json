@@ -1,4 +1,10 @@
 {
   "settings_key_keycodes": [83],
-  "app_keys": ["190:com.google.android.youtube.tv"]
+  "app_keys": ["190:com.google.android.youtube.tv"],
+  "sidebar": true,
+  "columns": 6,
+  "app_glow": true,
+  "dock_glass": true,
+  "screensaver_style": "drift_clock_aurora",
+  "home_idle_clock_minutes": 10
 }

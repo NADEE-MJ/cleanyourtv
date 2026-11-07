@@ -94,7 +94,7 @@ import java.util.Set;
 /**
  * tvOS style home: black, a pinned dock row, an app grid, and one glass highlight that springs between tiles.
  */
-public class MainActivity extends Activity implements AppAdapter.TileListener {
+public class MainActivity extends Activity implements AppAdapter.TileListener, FolderPanel.Host {
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LauncherLocale.wrap(base));   // locale
@@ -144,6 +144,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private AppAdapter adapter;
     private RecyclerView grid;
     private FrameLayout root;
+    /** sidebar: the overlay menu (Sidebar), its button at the top left, and whether the theme turned it on. */
+    private Sidebar sidebar;
+    private FolderPanel folderPanel;
+    private boolean sidebarOn;
+    private View btnSidebar;
     private WallpaperPlayer wallpaperPlayer;
     private GlassView glass;
     private View ambient;
@@ -816,6 +821,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         btnInputs = findViewById(R.id.btnInputs);
         View btnSettings = findViewById(R.id.btnSettings);
+        sidebarOn = cfg.sidebar;
+        sidebar = new Sidebar(this, root);
+        folderPanel = new FolderPanel(this, root, this);
+        btnSidebar = findViewById(R.id.btnSidebar);
+        btnSidebar.setVisibility(sidebarOn ? View.VISIBLE : View.GONE);
+        btnSidebar.setOnClickListener(v -> openSidebar(() -> btnSidebar.requestFocus()));
+        btnSidebar.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_DPAD_UP:
+                case KeyEvent.KEYCODE_DPAD_LEFT:
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_DOWN:
+                    focusTile(singleRow ? lastFocused : lastFocused % COLUMNS);
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_RIGHT:
+                    (btnInputs.getVisibility() == View.VISIBLE ? btnInputs : firstTopButton()).requestFocus();
+                    return true;
+                default:
+                    return false;
+            }
+        });
         btnInputs.setOnClickListener(v -> showInputs());
         btnWifi.setOnClickListener(v -> openNetworkPill());
         btnVpn.setOnClickListener(v -> openVpnPill());
@@ -906,7 +933,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : firstTopButton().getId();
             int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
             int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                if (v.getId() != leftButton) return false;
+                if (sidebarOn && !rtlMenuBar) btnSidebar.requestFocus();   // the menu button is left of the pills
+                return true;
+            }
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
         };
         btnInputs.setOnKeyListener(pillKeys);
@@ -1053,6 +1084,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (openLibraryIfAsked(intent)) return;
         if (openInputsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
+        if (sidebar != null && sidebar.isOpen()) sidebar.close(false);
+        if (folderPanel != null && folderPanel.isOpen()) folderPanel.close(false);
         if (gameDay != null && !stopped) gameDay.read();
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
@@ -2461,8 +2494,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
             // In the dock, the last app is the row's end: the empty slots after it take no focus.
             int rowCount = position < COLUMNS ? Math.min(count, adapter.dockFilled()) : count;
-            return GridNavigation.atHorizontalEdge(position, rowCount, COLUMNS,
+            boolean edge = GridNavigation.atHorizontalEdge(position, rowCount, COLUMNS,
                     rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
+            // Left past the first column opens the sidebar over the grid; closing it comes back to this tile.
+            if (edge && !forward && sidebarOn && position % COLUMNS == 0) {
+                openSidebar(() -> focusTile(position));
+            }
+            return edge;
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             if (position < COLUMNS) return false;          // dock row: let focus move to the top bar
@@ -2710,6 +2748,40 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         };
         grid.addOnScrollListener(pendingFocusScroll);
         grid.smoothScrollToPosition(pos);
+    }
+
+    // ---- sidebar ---------------------------------------------------------------------------------
+
+    private void openSidebar(Runnable onClosed) {
+        if (!sidebarOn || reordering || openPopup != null) return;
+        sidebar.open(sidebarRows(), animations, onClosed);
+    }
+
+    private List<Sidebar.Row> sidebarRows() {
+        List<Sidebar.Row> rows = new ArrayList<>();
+        rows.add(new Sidebar.Row(getString(R.string.inputs), null, this::showInputs, false));
+        rows.add(new Sidebar.Row(getString(R.string.wifi), null,
+                () -> open(systemIntent(Settings.ACTION_WIFI_SETTINGS)), false));
+        rows.add(new Sidebar.Row(getString(R.string.running_apps), null,
+                () -> open(new Intent(this, RunningAppsActivity.class)), false));
+        rows.add(new Sidebar.Row(getString(R.string.sleep_timer), () -> {
+            int left = SleepTimer.minutesLeft();
+            return left > 0 ? getString(R.string.sleep_timer_minutes, left) : getString(R.string.off);
+        }, () -> {
+            if (!SleepTimer.available()) {
+                Toast.makeText(this, R.string.sleep_timer_unavailable, Toast.LENGTH_LONG).show();
+                return;
+            }
+            SleepTimer.cycle(this);
+        }, true));
+        rows.add(new Sidebar.Row(getString(R.string.screensaver_start), null,
+                () -> startActivity(new Intent(this, ClockActivity.class)), false));
+        rows.add(new Sidebar.Row(getString(R.string.hidden_apps), null, this::showHiddenApps, false));
+        rows.add(new Sidebar.Row(getString(R.string.launcher_settings), null, () -> startActivityForResult(
+                new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST), false));
+        rows.add(new Sidebar.Row(getString(R.string.settings), null,
+                () -> open(systemIntent(Settings.ACTION_SETTINGS)), false));
+        return rows;
     }
 
     // ---- top bar ---------------------------------------------------------------------------------
@@ -3831,6 +3903,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public void onTileLongPress(int position, View card) {
         if (reordering || openPopup != null) return;
+        AppAdapter.Entry folderTile = adapter.folderAt(position);
+        if (folderTile != null) {
+            showFolderMenu(folderTile, position, card);
+            return;
+        }
         String key = adapter.keyAt(position);
         String pkg = adapter.packageAt(position);
         // Empty dock slots and the Default-home tile carry the launcher's own package: no menu for them.
@@ -3858,6 +3935,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Some firmware has no App info page at all; a row that only toasts "can't open" helps nobody.
         Intent info = SystemSettings.appInfo(this, pkg);
         if (info != null) addSettingsMenuRow(rows, popup, R.string.library_app_info, () -> open(info));
+        if (sidebarOn && adapter.kindAt(position) == AppAdapter.Entry.APP) {
+            addSettingsMenuRow(rows, popup, R.string.tile_move_to_folder, () -> showMoveToFolder(pkg, card));
+        }
+        if (sidebarOn) addSettingsMenuRow(rows, popup, R.string.tile_hide, () -> setAppHidden(pkg, true));
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
         // Dock tiles sit near the bottom of the screen: open the menu above the tile when it would not fit below.
@@ -3879,6 +3960,170 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, int title, Runnable action) {
+        addMenuRow(rows, popup, getString(title), action);
+    }
+
+    // ---- folders ---------------------------------------------------------------------------------
+
+    @Override
+    public void onOpenFolder(AppAdapter.Entry folder) {
+        if (reordering || openPopup != null) return;
+        String key = Folders.KEY_PREFIX + folder.folderId;
+        folderPanel.open(folder, animations, () -> {
+            for (int i = 0; i < adapter.appCount(); i++) {
+                AppAdapter.Entry f = adapter.folderAt(i);
+                if (f != null && key.equals(Folders.KEY_PREFIX + f.folderId)) {
+                    focusTile(i);
+                    return;
+                }
+            }
+            focusTile(0);
+        });
+    }
+
+    @Override
+    public void launchFromFolder(AppAdapter.Entry app) {
+        adapter.launchEntry(app);
+    }
+
+    /** Hold OK on an app inside an open folder. */
+    @Override
+    public void onFolderAppMenu(AppAdapter.Entry folder, AppAdapter.Entry app, View anchor) {
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (220 * density));
+        addSettingsMenuRow(rows, popup, R.string.folder_remove_app, () -> {
+            if (!Folders.remove(this, app.pkg)) {
+                Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
+                return;
+            }
+            folderPanel.close(false);
+            reloadApps(false);
+        });
+        Intent info = SystemSettings.appInfo(this, app.pkg);
+        if (info != null) addSettingsMenuRow(rows, popup, R.string.library_app_info, () -> open(info));
+        showMenuBelow(popup, panel, anchor, (int) (220 * density));
+        rows.getChildAt(0).requestFocus();
+    }
+
+    /** Hold OK on a folder tile: rename it or delete it (its apps go back on the grid). */
+    private void showFolderMenu(AppAdapter.Entry folder, int position, View card) {
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (200 * density));
+        addSettingsMenuRow(rows, popup, R.string.folder_rename, () -> renameFolder(folder));
+        if (position < adapter.movableCount()) addSettingsMenuRow(rows, popup, R.string.tile_move, () -> {
+            String key = adapter.keyAt(position);
+            if (!beginReorder()) return;
+            int at = adapter.positionOf(key);
+            if (at < 0) return;
+            focusTile(at);
+            pickUp(at);
+            Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
+        });
+        addSettingsMenuRow(rows, popup, R.string.folder_delete, () -> {
+            if (Folders.delete(this, folder.folderId)) reloadApps(false);
+            else Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
+        });
+        showMenuBelow(popup, panel, card, (int) (200 * density));
+        rows.getChildAt(0).requestFocus();
+    }
+
+    /** Tile menu's Move to folder: the folders with room, then New folder. */
+    private void showMoveToFolder(String pkg, View card) {
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (240 * density));
+        List<Folders.Folder> folders = Folders.load(this);
+        int n = 0;
+        for (Folders.Folder f : folders) {
+            n++;
+            if (f.full()) continue;   // exactly 12 apps at most: a full folder is not offered
+            String name = f.name.isEmpty() ? getString(R.string.folder_default_name, n) : f.name;
+            addMenuRow(rows, popup, name, () -> moveToFolder(pkg, f.id, null));
+        }
+        String fresh = getString(R.string.folder_default_name, folders.size() + 1);
+        addSettingsMenuRow(rows, popup, R.string.folder_new, () -> moveToFolder(pkg, null, fresh));
+        showMenuBelow(popup, panel, card, (int) (240 * density));
+        rows.getChildAt(0).requestFocus();
+    }
+
+    private void moveToFolder(String pkg, String folderId, String newName) {
+        if (Folders.moveInto(this, pkg, folderId, newName)) reloadApps(false);
+        else Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
+    }
+
+    private void renameFolder(AppAdapter.Entry folder) {
+        android.widget.EditText field = new android.widget.EditText(this);
+        field.setSingleLine(true);
+        field.setText(folder.label);
+        field.setSelectAllOnFocus(true);
+        int pad = (int) (20 * density);
+        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+        box.setPadding(pad, pad / 2, pad, 0);
+        box.addView(field);
+        new android.app.AlertDialog.Builder(this)
+                .setTitle(R.string.folder_rename)
+                .setView(box)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String name = field.getText().toString().trim();
+                    if (!name.isEmpty() && Folders.rename(this, folder.folderId, name)) reloadApps(false);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** A glass menu under the anchor, or above it when it would run off the bottom of the screen. */
+    private void showMenuBelow(PopupWindow popup, View panel, View anchor, int minWidth) {
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max(minWidth, panel.getMeasuredWidth()));
+        int[] at = new int[2];
+        anchor.getLocationInWindow(at);
+        int gap = (int) (10 * density), height = panel.getMeasuredHeight();
+        int y = at[1] + anchor.getHeight() + gap;
+        if (y + height > root.getHeight()) y = Math.max(0, at[1] - gap - height);
+        popup.showAtLocation(root, Gravity.NO_GRAVITY, at[0], y);
+    }
+
+    private void setAppHidden(String pkg, boolean hide) {
+        if (!HiddenApps.set(this, pkg, hide)) {
+            Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (hide) hiddenApps.add(pkg);
+        else hiddenApps.remove(pkg);
+        adapter.setHidden(pkg, hide);
+        reloadApps(false);
+    }
+
+    /** The sidebar's Hidden apps: the apps hidden with the tile menu; OK puts one back on Home. */
+    private void showHiddenApps() {
+        List<String> pkgs = new ArrayList<>(HiddenApps.load(this));
+        PackageManager pm = getPackageManager();
+        List<String[]> named = new ArrayList<>();
+        for (String pkg : pkgs) {
+            try {
+                named.add(new String[]{pkg, pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()});
+            } catch (PackageManager.NameNotFoundException ignored) {
+                // uninstalled since: nothing to show
+            }
+        }
+        if (named.isEmpty()) {
+            Toast.makeText(this, R.string.hidden_apps_none, Toast.LENGTH_LONG).show();
+            return;
+        }
+        named.sort((a, b) -> a[1].compareToIgnoreCase(b[1]));
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (280 * density));
+        for (String[] app : named) addMenuRow(rows, popup, app[1], () -> setAppHidden(app[0], false));
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (280 * density), panel.getMeasuredWidth()));
+        popup.showAtLocation(root, Gravity.START | Gravity.CENTER_VERTICAL, (int) (40 * density), 0);
+        rows.getChildAt(0).requestFocus();
+    }
+
+    private void addMenuRow(LinearLayout rows, PopupWindow popup, CharSequence title, Runnable action) {
         View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
         row.findViewById(R.id.icon).setVisibility(View.GONE);
         row.findViewById(R.id.dot).setVisibility(View.GONE);

@@ -361,6 +361,13 @@ public class HomeKeyService extends AccessibilityService {
         return running != null;
     }
 
+    /** The sleep timer's end: standby through the same global action as the "sleep" key word. False if unbound. */
+    static boolean sleepNow() {
+        HomeKeyService service = running;
+        return service != null && android.os.Build.VERSION.SDK_INT >= 28
+                && service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+    }
+
     /** The system power menu (Restart, and Power off where the firmware has it); the TV asks before it acts. */
     static void openPowerMenu() {
         HomeKeyService service = running;
