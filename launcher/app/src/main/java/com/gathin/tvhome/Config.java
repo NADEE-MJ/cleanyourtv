@@ -51,6 +51,21 @@ final class Config {
             ScreensaverView.RIPPLES, ScreensaverView.DAYLIGHT, ScreensaverView.MIDNIGHT, ScreensaverView.OCEAN,
             ScreensaverView.SUNSET, ScreensaverView.GRAPHITE};
     static final String CLOCK_STYLE_KEY = "home_clock_style";
+
+    /** A home_background value as the TV shows it (Launcher settings and the sidebar). */
+    static String backgroundLabel(Context ctx, String background) {
+        switch (background) {
+            case ScreensaverView.AURORA: return ctx.getString(R.string.screensaver_aurora);
+            case ScreensaverView.DUNES: return ctx.getString(R.string.screensaver_dunes);
+            case ScreensaverView.RIPPLES: return ctx.getString(R.string.screensaver_ripples);
+            case ScreensaverView.MIDNIGHT: return ctx.getString(R.string.background_midnight);
+            case ScreensaverView.DAYLIGHT: return ctx.getString(R.string.background_daylight);
+            case ScreensaverView.OCEAN: return ctx.getString(R.string.background_ocean);
+            case ScreensaverView.SUNSET: return ctx.getString(R.string.background_sunset);
+            case ScreensaverView.GRAPHITE: return ctx.getString(R.string.background_graphite);
+            default: return ctx.getString(R.string.background_glow);
+        }
+    }
     /** home_clock_style values, in the order Launcher settings cycles through them. */
     static final String[] CLOCK_STYLES = {"standard", "large", "compact", "minimal"};
     /**

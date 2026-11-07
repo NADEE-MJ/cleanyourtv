@@ -101,6 +101,10 @@ public final class ScreensaverView extends View {
         this.frameMs = frameMs;
         this.dim = dim;
         this.style = style;
+        // A new style (the sidebar's Background row) must not reuse the last one's cached gradients.
+        sky = null;
+        stillGlowA = null;
+        headerScrim = null;
         this.strength = strength;
         hueBuiltAt = -1;
         startedAt = SystemClock.uptimeMillis();

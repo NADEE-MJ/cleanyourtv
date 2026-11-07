@@ -186,6 +186,7 @@
     <string name="remote_action_sleep">שינה</string>
     <string name="remote_action_mute">השתקה</string>
     <string name="remote_action_recents">אפליקציות אחרונות</string>
+    <string name="background">רקע</string>
     <string name="memory_pill_waiting">זיכרון</string>
     <string name="background_state">רקע: %1$s</string>
     <string name="background_glow">זוהר האפליקציה</string>

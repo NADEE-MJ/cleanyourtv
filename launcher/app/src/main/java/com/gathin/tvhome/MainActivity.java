@@ -155,6 +155,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
     /** home_background: the scene or still gradient behind Home, or null for the glow. */
     private ScreensaverView homeScene;
     private String homeBackground = "glow";
+    /** ambient_glow as the theme set it, before a background that replaces the glow turned it off. */
+    private boolean themeAmbientGlow;
     private boolean sidebarOn;
     private View btnSidebar;
     private WallpaperPlayer wallpaperPlayer;
@@ -534,14 +536,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         glowSnap = cfg.glowSnap;
         appGlow = cfg.appGlow;
         homeBackground = cfg.homeBackground;
-        if (!"glow".equals(homeBackground)) {
-            homeScene = findViewById(R.id.homeScene);
-            // A moving scene replaces the glow (both repainting the screen would cost twice); a still one keeps it.
-            // Daylight is Apple TV's pale backdrop: the app's colour over it turned it pink, so it goes too.
-            if (ScreensaverView.isScene(homeBackground) || ScreensaverView.DAYLIGHT.equals(homeBackground)) {
-                ambientGlow = false;
-            }
-        }
+        homeScene = findViewById(R.id.homeScene);
+        themeAmbientGlow = ambientGlow;
+        ambientGlow = themeAmbientGlow && !replacesGlow(homeBackground);
         if (!ambientGlow) ambient.setVisibility(View.GONE);
         heroName = findViewById(R.id.heroName);
         hero = findViewById(R.id.hero);
@@ -1226,14 +1223,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             pillsShown = true;
         }
         if (showStats || statsChip != null) startStats();
-        if (homeScene != null) {
-            // Slower and darker than the screensaver: Home is read, not watched.
-            // Each frame makes Home redraw the whole screen, tiles and all: the slow scenes take few frames.
-            boolean ripples = ScreensaverView.RIPPLES.equals(homeBackground);
-            boolean aurora = ScreensaverView.AURORA.equals(homeBackground);
-            homeScene.start(homeBackground, aurora ? 0.7f : 1f, aurora ? 125L : ripples ? 66L : 100L,
-                    ScreensaverView.DUNES.equals(homeBackground) ? 0x73000000 : 0);
-        }
+        startHomeScene();
         if (gameDay != null) gameDay.start();
         sky.update();
         wallpaperPlayer.start();
@@ -1404,7 +1394,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
     protected void onPause() {
         super.onPause();
         resumed = false;
-        if (homeScene != null) homeScene.stop();   // nothing redraws behind an app
+        homeScene.stop();   // nothing redraws behind an app
         // No UP reaches a paused Home, so a vendor-key hold it saw go down would still open its app later.
         // Only Home's own share is dropped: a key service that saw the same DOWN keeps its hold.
         RemoteKeys.release(this);
@@ -2837,6 +2827,41 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         grid.smoothScrollToPosition(pos);
     }
 
+    /** A moving scene replaces the glow (both repainting the screen would cost twice); a still one keeps it.
+     *  Daylight is Apple TV's pale backdrop: the app's colour over it turned it pink, so it goes too. */
+    private static boolean replacesGlow(String background) {
+        return ScreensaverView.isScene(background) || ScreensaverView.DAYLIGHT.equals(background);
+    }
+
+    private void startHomeScene() {
+        if ("glow".equals(homeBackground)) {
+            homeScene.stop();
+            homeScene.setVisibility(View.GONE);
+            return;
+        }
+        // Slower and darker than the screensaver: Home is read, not watched.
+        // Each frame makes Home redraw the whole screen, tiles and all: the slow scenes take few frames.
+        boolean ripples = ScreensaverView.RIPPLES.equals(homeBackground);
+        boolean aurora = ScreensaverView.AURORA.equals(homeBackground);
+        homeScene.start(homeBackground, aurora ? 0.7f : 1f, aurora ? 125L : ripples ? 66L : 100L,
+                ScreensaverView.DUNES.equals(homeBackground) ? 0x73000000 : 0);
+    }
+
+    /** The sidebar's Background row: the next background, live, saved like Launcher settings' row. */
+    private void cycleHomeBackground() {
+        String[] all = Config.HOME_BACKGROUNDS;
+        int at = 0;
+        for (int i = 0; i < all.length; i++) if (all[i].equals(homeBackground)) at = i;
+        homeBackground = all[(at + 1) % all.length];
+        getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).edit()
+                .putString(Config.HOME_BACKGROUND_KEY, homeBackground).apply();
+        ambientGlow = themeAmbientGlow && !replacesGlow(homeBackground);
+        ambient.setVisibility(ambientGlow ? View.VISIBLE : View.GONE);
+        if (ambientGlow) ambient.setAlpha(1f);
+        homeScene.stop();
+        startHomeScene();
+    }
+
     /** home_clock_style: resizes the header's clock; standard leaves the layout as designed. */
     private void applyClockStyle(String style) {
         TextView clock = findViewById(R.id.clock);
@@ -2901,6 +2926,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             }
             SleepTimer.cycle(this);
         }, true));
+        rows.add(new Sidebar.Row(getString(R.string.background), () -> Config.backgroundLabel(this, homeBackground),
+                this::cycleHomeBackground, true));
         rows.add(new Sidebar.Row(getString(R.string.screensaver_start), null,
                 () -> startActivity(new Intent(this, ClockActivity.class)), false));
         rows.add(new Sidebar.Row(getString(R.string.hidden_apps), null, this::showHiddenApps, false));

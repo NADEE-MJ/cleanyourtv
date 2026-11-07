@@ -192,6 +192,7 @@
     <string name="remote_action_sleep">Sleep</string>
     <string name="remote_action_mute">Mute</string>
     <string name="remote_action_recents">Recent apps</string>
+    <string name="background">Background</string>
     <string name="memory_pill_waiting">Memory</string>
     <string name="background_state">Background: %1$s</string>
     <string name="background_glow">Glow</string>

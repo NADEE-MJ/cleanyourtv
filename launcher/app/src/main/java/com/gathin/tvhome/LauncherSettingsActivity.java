@@ -259,17 +259,7 @@ public final class LauncherSettingsActivity extends Activity {
     }
 
     private String backgroundLabel() {
-        switch (homeBackground) {
-            case ScreensaverView.AURORA: return getString(R.string.screensaver_aurora);
-            case ScreensaverView.DUNES: return getString(R.string.screensaver_dunes);
-            case ScreensaverView.RIPPLES: return getString(R.string.screensaver_ripples);
-            case ScreensaverView.MIDNIGHT: return getString(R.string.background_midnight);
-            case ScreensaverView.DAYLIGHT: return getString(R.string.background_daylight);
-            case ScreensaverView.OCEAN: return getString(R.string.background_ocean);
-            case ScreensaverView.SUNSET: return getString(R.string.background_sunset);
-            case ScreensaverView.GRAPHITE: return getString(R.string.background_graphite);
-            default: return getString(R.string.background_glow);
-        }
+        return Config.backgroundLabel(this, homeBackground);
     }
 
     private String screensaverLabel() {
