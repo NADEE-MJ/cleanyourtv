@@ -147,6 +147,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
     /** sidebar: the overlay menu (Sidebar), its button at the top left, and whether the theme turned it on. */
     private Sidebar sidebar;
     private FolderPanel folderPanel;
+    /** The open FolderPanel shows the hidden apps (OK puts one back) rather than a folder. */
+    private boolean hiddenPanelOpen;
+    /** sidebar: CPU and memory at the top right, in place of the Inputs, Wi-Fi and Settings pills. */
+    private TextView statsChip;
     private boolean sidebarOn;
     private View btnSidebar;
     private WallpaperPlayer wallpaperPlayer;
@@ -832,18 +836,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         btnSidebar.setOnFocusChangeListener((v, has) -> {
             if (!has) v.setFocusable(false);
         });
-        btnSidebar.setOnClickListener(v -> openSidebar(() -> btnSidebar.requestFocus()));
+        Runnable backToButton = () -> {
+            btnSidebar.setFocusable(true);
+            btnSidebar.requestFocus();
+        };
+        btnSidebar.setOnClickListener(v -> openSidebar(backToButton));
         btnSidebar.setOnKeyListener((v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             switch (keyCode) {
                 case KeyEvent.KEYCODE_DPAD_UP:
+                case KeyEvent.KEYCODE_DPAD_RIGHT:
+                    return true;   // nothing focusable above or beside it: the pills give way to the stats
                 case KeyEvent.KEYCODE_DPAD_LEFT:
+                    openSidebar(backToButton);   // Left at the screen's left edge always opens the sidebar
                     return true;
                 case KeyEvent.KEYCODE_DPAD_DOWN:
                     focusTile(singleRow ? lastFocused : lastFocused % COLUMNS);
-                    return true;
-                case KeyEvent.KEYCODE_DPAD_RIGHT:
-                    (btnInputs.getVisibility() == View.VISIBLE ? btnInputs : firstTopButton()).requestFocus();
                     return true;
                 default:
                     return false;
@@ -907,6 +915,24 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             tlp.bottomMargin = 0;
             topButtons.setLayoutParams(tlp);
             topButtons.setGravity(Gravity.CENTER_VERTICAL);
+        }
+        if (sidebarOn) {
+            // Inputs, Wi-Fi and Settings live in the sidebar; the top right shows CPU and memory instead.
+            showInputsPill = false;
+            btnInputs.setVisibility(View.GONE);
+            btnWifi.setVisibility(View.GONE);
+            btnSettings.setVisibility(View.GONE);
+            statsChip = new TextView(this);
+            statsChip.setTextColor(0xB3FFFFFF);
+            statsChip.setTextSize(15);
+            statsChip.setTypeface(android.graphics.Typeface.create(getString(R.string.font_medium), android.graphics.Typeface.NORMAL));
+            statsChip.setLetterSpacing(0.04f);
+            statsChip.setGravity(Gravity.CENTER_VERTICAL);
+            statsChip.setFocusable(false);
+            statsChip.setSingleLine(true);
+            statsChip.setFontFeatureSettings("tnum");
+            ((LinearLayout) findViewById(R.id.topButtons)).addView(statsChip, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, (int) (42 * density)));
         }
         if (iconOnlyButtons) {
             if (cfg.wifiLabelWidth > 0) btnWifi.setMaxWidth(Math.round(cfg.wifiLabelWidth * density));
@@ -1185,7 +1211,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             updateInputsButton();
             pillsShown = true;
         }
-        if (showStats) startStats();
+        if (showStats || statsChip != null) startStats();
         if (gameDay != null) gameDay.start();
         sky.update();
         wallpaperPlayer.start();
@@ -2305,7 +2331,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
 
     private void startStats() {
         if (statsThread != null) return;
-        stats.setVisibility(View.VISIBLE);
+        if (showStats) stats.setVisibility(View.VISIBLE);
         cpuTotalPrev = -1;
         idlePrev = -1;
         procStatDead = false;
@@ -2319,9 +2345,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             @Override
             public void run() {
                 if (statsBg != bg) return;
-                String line = readStatsLine();
+                // One reader feeds one view: the CPU figure is a difference between two samples.
+                String line = showStats ? readStatsLine() : readChipLine();
                 handler.post(() -> {
-                    if (showStats && stats != null && statsBg == bg) stats.setText(line);
+                    if (statsBg != bg) return;
+                    if (showStats && stats != null) stats.setText(line);
+                    else if (statsChip != null) statsChip.setText(line);
                 });
                 if (statsBg == bg) bg.postDelayed(this, STATS_MS);
             }
@@ -2365,6 +2394,26 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         String free = formatGb(getResources(), Environment.getDataDirectory().getFreeSpace());
         if (!free.isEmpty()) appendStat(line, getString(R.string.stats_storage, free));
         return StatsText.forLocale(line.toString(), getResources().getConfiguration().getLocales().get(0));
+    }
+
+    /** The top-right readout with the sidebar on, e.g. "CPU 12%  ·  Memory 64%". Runs off the main thread. */
+    private String readChipLine() {
+        int cpu = cpuPercent();
+        if (cpu < 0) {
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return "";
+            }
+            cpu = cpuPercent();
+        }
+        StringBuilder line = new StringBuilder();
+        if (cpu >= 0) line.append(getString(R.string.stats_cpu, cpu));
+        long[] mem = memUsedOfTotalMb();
+        if (mem != null && mem[1] > 0) appendStat(line, getString(R.string.stats_memory_percent,
+                (int) Math.round(mem[0] * 100.0 / mem[1])));
+        return line.toString();
     }
 
     // -1: need another sample. -2: this source cannot be read (Android 9 hides /proc/stat from apps).
@@ -2512,7 +2561,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
             return edge;
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-            if (position < COLUMNS) return false;          // dock row: let focus move to the top bar
+            if (position < COLUMNS) {
+                if (!sidebarOn) return false;              // dock row: let focus move to the top bar
+                btnSidebar.setFocusable(true);             // the pills are gone: Up reaches the menu button
+                btnSidebar.requestFocus();
+                return true;
+            }
             target = position - COLUMNS;
         } else {
             int lastRowStart = ((count - 1) / COLUMNS) * COLUMNS;
@@ -2769,7 +2823,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
     private List<Sidebar.Row> sidebarRows() {
         List<Sidebar.Row> rows = new ArrayList<>();
         rows.add(new Sidebar.Row(getString(R.string.inputs), null, this::showInputs, false));
-        rows.add(new Sidebar.Row(getString(R.string.wifi), null,
+        rows.add(new Sidebar.Row(getString(R.string.settings), null,
+                () -> open(systemIntent(Settings.ACTION_SETTINGS)), false));
+        // The Wi-Fi pill is hidden but keeps its label current: the network's name, or its state.
+        rows.add(new Sidebar.Row(getString(R.string.wifi), () -> btnWifi.getText().toString(),
                 () -> open(systemIntent(Settings.ACTION_WIFI_SETTINGS)), false));
         rows.add(new Sidebar.Row(getString(R.string.running_apps), null,
                 () -> open(new Intent(this, RunningAppsActivity.class)), false));
@@ -2788,8 +2845,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         rows.add(new Sidebar.Row(getString(R.string.hidden_apps), null, this::showHiddenApps, false));
         rows.add(new Sidebar.Row(getString(R.string.launcher_settings), null, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST), false));
-        rows.add(new Sidebar.Row(getString(R.string.settings), null,
-                () -> open(systemIntent(Settings.ACTION_SETTINGS)), false));
         return rows;
     }
 
@@ -3492,7 +3547,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         // Read the switch, not the pill: show_inputs_pill=false hides the pill too, and there the list
         // keeps its usual place.
         boolean underGear = topMenu;
-        View anchor = findViewById(underGear ? R.id.btnSettings : R.id.btnInputs);
+        View anchor = sidebarOn ? btnSidebar : findViewById(underGear ? R.id.btnSettings : R.id.btnInputs);
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
 
@@ -3681,7 +3736,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max(width, Math.min(panel.getMeasuredWidth(), (int) (360 * density))));
 
-        int alignment = getResources().getBoolean(R.bool.rtl_menu_bar) != underGear ? Gravity.END : Gravity.START;
+        int alignment = sidebarOn ? Gravity.START
+                : getResources().getBoolean(R.bool.rtl_menu_bar) != underGear ? Gravity.END : Gravity.START;
         dropIn(popup, panel, anchor, alignment);
         for (int i = 0; i < rows.getChildCount(); i++) {
             View child = rows.getChildAt(i);
@@ -3978,7 +4034,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
     public void onOpenFolder(AppAdapter.Entry folder) {
         if (reordering || openPopup != null) return;
         String key = Folders.KEY_PREFIX + folder.folderId;
-        folderPanel.open(folder, animations, () -> {
+        hiddenPanelOpen = false;
+        folderPanel.open(folder, getString(R.string.folder_count, folder.members.size(), Folders.MAX_APPS), null,
+                animations, () -> {
             for (int i = 0; i < adapter.appCount(); i++) {
                 AppAdapter.Entry f = adapter.folderAt(i);
                 if (f != null && key.equals(Folders.KEY_PREFIX + f.folderId)) {
@@ -3992,6 +4050,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
 
     @Override
     public void launchFromFolder(AppAdapter.Entry app) {
+        if (hiddenPanelOpen) {
+            // Hidden apps: OK puts the app back on Home rather than opening it.
+            folderPanel.close(false);
+            setAppHidden(app.pkg, false);
+            Toast.makeText(this, getString(R.string.hidden_apps_restored, app.label), Toast.LENGTH_SHORT).show();
+            return;
+        }
         adapter.launchEntry(app);
     }
 
@@ -4001,6 +4066,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (220 * density));
+        if (hiddenPanelOpen) {
+            addSettingsMenuRow(rows, popup, R.string.hidden_apps_open, () -> adapter.launchEntry(app));
+            Intent info = SystemSettings.appInfo(this, app.pkg);
+            if (info != null) addSettingsMenuRow(rows, popup, R.string.library_app_info, () -> open(info));
+            showMenuBelow(popup, panel, anchor, (int) (220 * density));
+            rows.getChildAt(0).requestFocus();
+            return;
+        }
         addSettingsMenuRow(rows, popup, R.string.folder_remove_app, () -> {
             if (!Folders.remove(this, app.pkg)) {
                 Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
@@ -4105,31 +4178,39 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         reloadApps(false);
     }
 
-    /** The sidebar's Hidden apps: the apps hidden with the tile menu; OK puts one back on Home. */
+    /** The sidebar's Hidden apps, laid out like a folder with the apps' own tiles: OK puts one back on Home. */
     private void showHiddenApps() {
-        List<String> pkgs = new ArrayList<>(HiddenApps.load(this));
         PackageManager pm = getPackageManager();
-        List<String[]> named = new ArrayList<>();
-        for (String pkg : pkgs) {
+        List<AppAdapter.Entry> apps = new ArrayList<>();
+        for (String pkg : HiddenApps.load(this)) {
+            Intent launch = pm.getLeanbackLaunchIntentForPackage(pkg);
+            if (launch == null) launch = pm.getLaunchIntentForPackage(pkg);
+            if (launch == null || launch.getComponent() == null) continue;
             try {
-                named.add(new String[]{pkg, pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()});
+                ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
+                Drawable banner = pm.getApplicationBanner(info);
+                Drawable icon = banner == null ? pm.getApplicationIcon(info) : null;
+                apps.add(new AppAdapter.Entry(pm.getApplicationLabel(info).toString(), launch.getComponent(), banner, icon));
             } catch (PackageManager.NameNotFoundException ignored) {
                 // uninstalled since: nothing to show
             }
         }
-        if (named.isEmpty()) {
+        if (apps.isEmpty()) {
             Toast.makeText(this, R.string.hidden_apps_none, Toast.LENGTH_LONG).show();
             return;
         }
-        named.sort((a, b) -> a[1].compareToIgnoreCase(b[1]));
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
-        LinearLayout rows = panel.findViewById(R.id.rows);
-        PopupWindow popup = glassPopup(panel, (int) (280 * density));
-        for (String[] app : named) addMenuRow(rows, popup, app[1], () -> setAppHidden(app[0], false));
-        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        popup.setWidth(Math.max((int) (280 * density), panel.getMeasuredWidth()));
-        popup.showAtLocation(root, Gravity.START | Gravity.CENTER_VERTICAL, (int) (40 * density), 0);
-        rows.getChildAt(0).requestFocus();
+        apps.sort((a, b) -> a.label.compareToIgnoreCase(b.label));
+        if (apps.size() > FolderPanel.MAX_TILES) apps = new ArrayList<>(apps.subList(0, FolderPanel.MAX_TILES));
+        AppAdapter.Entry panel = new AppAdapter.Entry(AppAdapter.Entry.FOLDER, getString(R.string.hidden_apps),
+                new ComponentName(this, "hidden-apps"), null, null, null, 0);
+        panel.members = apps;
+        hiddenPanelOpen = true;
+        int back = Math.max(0, lastFocused);
+        folderPanel.open(panel, getResources().getQuantityString(R.plurals.hidden_apps_count, apps.size(), apps.size()),
+                getString(R.string.hidden_apps_hint), animations, () -> {
+                    hiddenPanelOpen = false;
+                    focusTile(Math.min(back, Math.max(0, adapter.appCount() - 1)));
+                });
     }
 
     private void addMenuRow(LinearLayout rows, PopupWindow popup, CharSequence title, Runnable action) {

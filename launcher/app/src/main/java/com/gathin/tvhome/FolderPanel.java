@@ -32,6 +32,8 @@ final class FolderPanel {
     }
 
     private static final int COLS = 4;
+    /** Folders hold 12 (Folders.MAX_APPS); the Hidden apps panel shows up to this many, 4 rows, smaller tiles. */
+    static final int MAX_TILES = 16;
     private static final long HOLD_MS = 550L;
     private static final long FADE_MS = 200L;
 
@@ -59,20 +61,21 @@ final class FolderPanel {
         return overlay != null && !closing;
     }
 
-    void open(AppAdapter.Entry folder, boolean animate, Runnable onClosed) {
+    /** countText sits right of the title ("3 of 12"); hint, when not null, is a line under the tiles. */
+    void open(AppAdapter.Entry folder, String countText, String hint, boolean animate, Runnable onClosed) {
         if (overlay != null || folder.members == null) return;
         this.folder = folder;
         this.onClosed = onClosed;
         closing = false;
         overlay = new FrameLayout(activity);
         overlay.setClickable(true);
-        overlay.setBackgroundColor(0x8C000000);
+        overlay.setBackgroundColor(0xA6000000);
 
         panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(36), dp(28), dp(36), dp(26));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xEB27262C);
+        bg.setColor(0xFF27262C);   // solid: the grid behind showed through the title
         bg.setCornerRadius(dp(30));
         bg.setStroke(Math.max(1, dp(1)), 0x2EFFFFFF);
         panel.setBackground(bg);
@@ -89,14 +92,15 @@ final class FolderPanel {
         title.setSingleLine(true);
         head.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView count = new TextView(activity);
-        count.setText(activity.getString(R.string.folder_count, folder.members.size(), Folders.MAX_APPS));
+        count.setText(countText);
         count.setTextColor(0x8CFFFFFF);
         count.setTextSize(15);
         count.setTypeface(Typeface.create(activity.getString(R.string.font_medium), Typeface.NORMAL));
         head.addView(count);
         panel.addView(head);
 
-        int tileW = dp(176), tileH = Math.round(tileW * 0.5625f), gap = dp(22);
+        boolean fourRows = folder.members.size() > Folders.MAX_APPS;
+        int tileW = dp(fourRows ? 140 : 176), tileH = Math.round(tileW * 0.5625f), gap = dp(fourRows ? 16 : 22);
         tiles.clear();
         LinearLayout row = null;
         for (int i = 0; i < folder.members.size(); i++) {
@@ -123,6 +127,17 @@ final class FolderPanel {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         nlp.topMargin = dp(18);
         panel.addView(focusedName, nlp);
+        if (hint != null) {
+            TextView h = new TextView(activity);
+            h.setText(hint);
+            h.setTextColor(0x8CFFFFFF);
+            h.setTextSize(13);
+            h.setTypeface(Typeface.create(activity.getString(R.string.font_medium), Typeface.NORMAL));
+            LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            hlp.topMargin = dp(4);
+            panel.addView(h, hlp);
+        }
         panel.setClipChildren(false);
         panel.setClipToPadding(false);
 

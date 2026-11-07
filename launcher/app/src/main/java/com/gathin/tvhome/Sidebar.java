@@ -80,15 +80,15 @@ final class Sidebar {
         View scrim = new View(activity);
         scrim.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
                 new int[]{0xB3000000, 0x59000000, 0x00000000}));
-        overlay.addView(scrim, new FrameLayout.LayoutParams(dp(640), ViewGroup.LayoutParams.MATCH_PARENT));
+        overlay.addView(scrim, new FrameLayout.LayoutParams(dp(520), ViewGroup.LayoutParams.MATCH_PARENT));
 
         panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(14);
-        panel.setPadding(pad, dp(22), pad, dp(22));
+        int pad = dp(10);
+        panel.setPadding(pad, dp(16), pad, dp(16));
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(0xF21C1A20);
-        bg.setCornerRadius(dp(24));
+        bg.setCornerRadius(dp(20));
         bg.setStroke(Math.max(1, dp(1)), 0x1FFFFFFF);
         panel.setBackground(bg);
         panel.setElevation(dp(12));
@@ -96,27 +96,27 @@ final class Sidebar {
         TextView title = new TextView(activity);
         title.setText(R.string.sidebar_title);
         title.setTextColor(0x99FFFFFF);
-        title.setTextSize(13);
+        title.setTextSize(11);
         title.setTypeface(medium);
         title.setLetterSpacing(0.18f);
         title.setAllCaps(true);
-        title.setPadding(dp(14), 0, dp(14), dp(14));
+        title.setPadding(dp(12), 0, dp(12), dp(8));
         panel.addView(title);
 
         rowViews.clear();
         valueViews.clear();
         for (int i = 0; i < rows.size(); i++) panel.addView(buildRow(rows.get(i), i));
 
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT,
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(236), ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.START | Gravity.CENTER_VERTICAL);
-        lp.leftMargin = dp(24);
+        lp.leftMargin = dp(20);
         overlay.addView(panel, lp);
         root.addView(overlay, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         if (animate) {
             scrim.setAlpha(0f);
             scrim.animate().alpha(1f).setDuration(SLIDE_MS).start();
-            panel.setTranslationX(-dp(330));
+            panel.setTranslationX(-dp(270));
             panel.animate().translationX(0f).setDuration(SLIDE_MS)
                     .setInterpolator(new DecelerateInterpolator(1.6f)).start();
         }
@@ -152,7 +152,7 @@ final class Sidebar {
             return;
         }
         gone.animate().alpha(0f).setDuration(SLIDE_MS - 60).start();
-        panel.animate().translationX(-dp(330)).setDuration(SLIDE_MS - 60)
+        panel.animate().translationX(-dp(270)).setDuration(SLIDE_MS - 60)
                 .setInterpolator(new DecelerateInterpolator()).withEndAction(finish).start();
     }
 
@@ -162,11 +162,11 @@ final class Sidebar {
         v.setGravity(Gravity.CENTER_VERTICAL);
         v.setFocusable(true);
         v.setFocusableInTouchMode(false);
-        v.setPadding(dp(16), dp(13), dp(16), dp(13));
+        v.setPadding(dp(12), dp(8), dp(12), dp(8));
         StateListDrawable states = new StateListDrawable();
         GradientDrawable on = new GradientDrawable();
         on.setColor(0xFFFFFFFF);
-        on.setCornerRadius(dp(14));
+        on.setCornerRadius(dp(11));
         states.addState(new int[]{android.R.attr.state_focused}, on);
         states.addState(new int[]{}, new ColorDrawable(0));
         v.setBackground(states);
@@ -177,7 +177,7 @@ final class Sidebar {
 
         TextView label = new TextView(activity);
         label.setText(row.label);
-        label.setTextSize(19);
+        label.setTextSize(15);
         label.setTypeface(medium);
         label.setTextColor(ink);
         label.setDuplicateParentStateEnabled(true);
@@ -185,11 +185,14 @@ final class Sidebar {
         v.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView value = new TextView(activity);
-        value.setTextSize(16);
+        value.setTextSize(13);
         value.setTypeface(light);
         value.setTextColor(dim);
         value.setDuplicateParentStateEnabled(true);
         value.setSingleLine(true);
+        value.setMaxWidth(dp(110));   // a long Wi-Fi name must not squeeze the label out
+        value.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        value.setPadding(dp(8), 0, 0, 0);
         value.setText(row.value != null ? row.value.get() : "");
         v.addView(value, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -197,7 +200,7 @@ final class Sidebar {
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = dp(2);
+        lp.topMargin = dp(1);
         v.setLayoutParams(lp);
         v.setOnClickListener(x -> {
             if (closing) return;

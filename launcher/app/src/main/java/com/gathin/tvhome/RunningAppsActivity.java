@@ -145,6 +145,12 @@ public class RunningAppsActivity extends Activity {
             if (pkg.equals(getPackageName()) || s.getLastTimeUsed() < now - WINDOW_MS
                     || s.getTotalTimeInForeground() <= 0) continue;
             if (pm.getLeanbackLaunchIntentForPackage(pkg) == null && pm.getLaunchIntentForPackage(pkg) == null) continue;
+            // Force stop puts an app in the stopped state until it is opened again: it is not running, so it goes.
+            try {
+                if ((pm.getApplicationInfo(pkg, 0).flags & ApplicationInfo.FLAG_STOPPED) != 0) continue;
+            } catch (PackageManager.NameNotFoundException e) {
+                continue;
+            }
             out.add(s);
         }
         out.sort((a, b) -> Long.compare(b.getLastTimeUsed(), a.getLastTimeUsed()));

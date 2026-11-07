@@ -168,6 +168,14 @@
     <string name="hidden_apps">Hidden apps</string>
     <string name="hidden_apps_none">No hidden apps. Hold OK on an app and choose Hide.</string>
     <string name="tile_hide">Hide</string>
+    <string name="stats_memory_percent">Memory %1$d%%</string>
+    <string name="hidden_apps_hint">OK puts an app back on Home. Hold OK to open it.</string>
+    <string name="hidden_apps_restored">%1$s is back on Home</string>
+    <string name="hidden_apps_open">Open</string>
+    <plurals name="hidden_apps_count">
+        <item quantity="one">%1$d app</item>
+        <item quantity="other">%1$d apps</item>
+    </plurals>
     <string name="tile_move_to_folder">Move to folder</string>
     <string name="folder_new">New folder</string>
     <string name="folder_default_name">Folder %1$d</string>
@@ -176,7 +184,7 @@
     <string name="folder_rename">Rename folder</string>
     <string name="folder_delete">Delete folder</string>
     <string name="running_apps_memory">Memory in use: %1$s of %2$s</string>
-    <string name="running_apps_hint">Apps used in the last 12 hours, newest first. OK opens the app\'s page, where Force stop closes it.</string>
+    <string name="running_apps_hint">Apps opened in the last 12 hours that are still open, newest first. Close opens the app\'s page: choose Force stop there, then Back, and it leaves this list.</string>
     <string name="running_apps_no_access">Usage access is off. Grant it once over ADB: appops set com.gathin.tvhome GET_USAGE_STATS allow</string>
     <string name="running_apps_empty">No apps used recently.</string>
     <string name="running_apps_ago_min">%1$d min ago</string>
