@@ -169,6 +169,15 @@
     <string name="hidden_apps_none">No hidden apps. Hold OK on an app and choose Hide.</string>
     <string name="tile_hide">Hide</string>
     <string name="stats_memory_percent">Memory %1$d%%</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="clock_style_state">Clock style: %1$s</string>
+    <string name="clock_style_standard">Standard</string>
+    <string name="clock_style_large">Large</string>
+    <string name="clock_style_compact">Compact</string>
+    <string name="clock_style_minimal">Time only</string>
+    <string name="background_daylight">Daylight</string>
+    <string name="background_ocean">Ocean</string>
+    <string name="background_sunset">Sunset</string>
     <string name="memory_pill_waiting">Memory</string>
     <string name="background_state">Background: %1$s</string>
     <string name="background_glow">Glow</string>

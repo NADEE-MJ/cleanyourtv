@@ -53,8 +53,8 @@ public class RunningAppsActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         density = getResources().getDisplayMetrics().density;
-        medium = Typeface.create(getString(R.string.font_medium), Typeface.NORMAL);
-        light = Typeface.create(getString(R.string.font_light), Typeface.NORMAL);
+        medium = UiFont.get(this, R.string.font_medium);
+        light = UiFont.get(this, R.string.font_light);
     }
 
     @Override

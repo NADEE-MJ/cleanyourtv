@@ -537,7 +537,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         if (!"glow".equals(homeBackground)) {
             homeScene = findViewById(R.id.homeScene);
             // A moving scene replaces the glow (both repainting the screen would cost twice); a still one keeps it.
-            if (ScreensaverView.isScene(homeBackground)) ambientGlow = false;
+            // Daylight is Apple TV's pale backdrop: the app's colour over it turned it pink, so it goes too.
+            if (ScreensaverView.isScene(homeBackground) || ScreensaverView.DAYLIGHT.equals(homeBackground)) {
+                ambientGlow = false;
+            }
         }
         if (!ambientGlow) ambient.setVisibility(View.GONE);
         heroName = findViewById(R.id.heroName);
@@ -611,6 +614,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         if (lunar) lunarDate.setVisibility(View.VISIBLE);
         greetingName = cfg.greetingName;
         if (cfg.dateBelowClock) moveDateBelowClock();
+        applyClockStyle(cfg.homeClockStyle);
         if (cfg.dateBelowClock && cfg.iconOnlyButtons && !cfg.topMenu
                 && !getResources().getBoolean(R.bool.rtl_menu_bar)) {
             alignDateBelowIconsWithClock();
@@ -1224,9 +1228,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         if (showStats || statsChip != null) startStats();
         if (homeScene != null) {
             // Slower and darker than the screensaver: Home is read, not watched.
+            // Each frame makes Home redraw the whole screen, tiles and all: the slow scenes take few frames.
             boolean ripples = ScreensaverView.RIPPLES.equals(homeBackground);
-            homeScene.start(homeBackground, ScreensaverView.AURORA.equals(homeBackground) ? 0.7f : 1f,
-                    ripples ? 50L : 66L, ScreensaverView.DUNES.equals(homeBackground) ? 0x73000000 : 0);
+            boolean aurora = ScreensaverView.AURORA.equals(homeBackground);
+            homeScene.start(homeBackground, aurora ? 0.7f : 1f, aurora ? 125L : ripples ? 66L : 100L,
+                    ScreensaverView.DUNES.equals(homeBackground) ? 0x73000000 : 0);
         }
         if (gameDay != null) gameDay.start();
         sky.update();
@@ -2831,6 +2837,36 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         grid.smoothScrollToPosition(pos);
     }
 
+    /** home_clock_style: resizes the header's clock; standard leaves the layout as designed. */
+    private void applyClockStyle(String style) {
+        TextView clock = findViewById(R.id.clock);
+        TextView ampm = findViewById(R.id.ampm);
+        TextView date = findViewById(R.id.date);
+        switch (style) {
+            case "large":
+                clock.setTextSize(84f);
+                clock.setTypeface(UiFont.get(this, R.string.font_extralight));
+                ampm.setTextSize(20f);
+                date.setTextSize(17f);
+                break;
+            case "compact":
+                greeting.setVisibility(View.GONE);
+                clock.setTextSize(36f);
+                ampm.setTextSize(12f);
+                date.setTextSize(13f);
+                break;
+            case "minimal":
+                greeting.setVisibility(View.GONE);
+                date.setVisibility(View.GONE);
+                findViewById(R.id.clockDivider).setVisibility(View.GONE);
+                clock.setTextSize(44f);
+                clock.setTypeface(UiFont.get(this, R.string.font_extralight));
+                break;
+            default:
+                break;
+        }
+    }
+
     // ---- sidebar ---------------------------------------------------------------------------------
 
     private void openSidebar(Runnable onClosed) {
@@ -2845,6 +2881,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, F
         // The Wi-Fi pill is hidden but keeps its label current: the network's name, or its state.
         rows.add(new Sidebar.Row(getString(R.string.wifi), () -> btnWifi.getText().toString(),
                 () -> open(systemIntent(Settings.ACTION_WIFI_SETTINGS)), false));
+        // Bluetooth: its state at a glance; OK opens the TV's page for it (apps may not switch it since Android 13,
+        // and the remote itself may be on Bluetooth).
+        rows.add(new Sidebar.Row(getString(R.string.bluetooth), () -> {
+            android.bluetooth.BluetoothManager bm = getSystemService(android.bluetooth.BluetoothManager.class);
+            android.bluetooth.BluetoothAdapter bt = bm == null ? null : bm.getAdapter();
+            if (bt == null) return "";
+            return getString(bt.isEnabled() ? R.string.on : R.string.off);
+        }, () -> open(systemIntent(Settings.ACTION_BLUETOOTH_SETTINGS)), false));
         rows.add(new Sidebar.Row(getString(R.string.running_apps), null,
                 () -> open(new Intent(this, RunningAppsActivity.class)), false));
         rows.add(new Sidebar.Row(getString(R.string.sleep_timer), () -> {

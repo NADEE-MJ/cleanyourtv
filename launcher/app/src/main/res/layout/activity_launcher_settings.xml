@@ -108,6 +108,11 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/clockStyleChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="10dp" />
+
+        <TextView
             android:id="@+id/backgroundChoice"
             style="@style/SettingsRow"
             android:layout_marginTop="28dp" />

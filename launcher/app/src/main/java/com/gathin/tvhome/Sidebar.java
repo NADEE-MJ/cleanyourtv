@@ -61,8 +61,8 @@ final class Sidebar {
         this.activity = activity;
         this.root = root;
         this.density = activity.getResources().getDisplayMetrics().density;
-        this.medium = Typeface.create(activity.getString(R.string.font_medium), Typeface.NORMAL);
-        this.light = Typeface.create(activity.getString(R.string.font_light), Typeface.NORMAL);
+        this.medium = UiFont.get(activity, R.string.font_medium);
+        this.light = UiFont.get(activity, R.string.font_light);
     }
 
     boolean isOpen() {

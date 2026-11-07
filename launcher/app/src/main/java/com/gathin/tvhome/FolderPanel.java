@@ -87,14 +87,14 @@ final class FolderPanel {
         title.setText(folder.label);
         title.setTextColor(0xFFFFFFFF);
         title.setTextSize(30);
-        title.setTypeface(Typeface.create(activity.getString(R.string.font_light), Typeface.NORMAL));
+        title.setTypeface(UiFont.get(activity, R.string.font_light));
         title.setSingleLine(true);
         head.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView count = new TextView(activity);
         count.setText(countText);
         count.setTextColor(0x8CFFFFFF);
         count.setTextSize(15);
-        count.setTypeface(Typeface.create(activity.getString(R.string.font_medium), Typeface.NORMAL));
+        count.setTypeface(UiFont.get(activity, R.string.font_medium));
         head.addView(count);
         panel.addView(head);
 
@@ -121,7 +121,7 @@ final class FolderPanel {
             name.setText(folder.members.get(i).label);
             name.setTextColor(0xF2FFFFFF);
             name.setTextSize(fourRows ? 13 : 15);
-            name.setTypeface(Typeface.create(activity.getString(R.string.font_medium), Typeface.NORMAL));
+            name.setTypeface(UiFont.get(activity, R.string.font_medium));
             name.setSingleLine(true);
             name.setEllipsize(android.text.TextUtils.TruncateAt.END);
             name.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -140,7 +140,7 @@ final class FolderPanel {
             h.setText(hint);
             h.setTextColor(0x8CFFFFFF);
             h.setTextSize(13);
-            h.setTypeface(Typeface.create(activity.getString(R.string.font_medium), Typeface.NORMAL));
+            h.setTypeface(UiFont.get(activity, R.string.font_medium));
             LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             hlp.topMargin = dp(10);

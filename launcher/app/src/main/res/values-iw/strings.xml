@@ -163,6 +163,15 @@
     <string name="hidden_apps_none">אין אפליקציות מוסתרות. לחצו לחיצה ארוכה על OK באפליקציה ובחרו הסתרה.</string>
     <string name="tile_hide">הסתרה</string>
     <string name="stats_memory_percent">זיכרון %1$d%%</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="clock_style_state">סגנון שעון: %1$s</string>
+    <string name="clock_style_standard">רגיל</string>
+    <string name="clock_style_large">גדול</string>
+    <string name="clock_style_compact">קומפקטי</string>
+    <string name="clock_style_minimal">שעה בלבד</string>
+    <string name="background_daylight">אור יום</string>
+    <string name="background_ocean">אוקיינוס</string>
+    <string name="background_sunset">שקיעה</string>
     <string name="memory_pill_waiting">זיכרון</string>
     <string name="background_state">רקע: %1$s</string>
     <string name="background_glow">זוהר האפליקציה</string>
