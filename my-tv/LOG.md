@@ -58,3 +58,5 @@ guards in `disable.sh`; main risks are third-party add-ons and the AI-driven ins
   the sidebar. Aurora on Home after the fixes: ~8% launcher CPU, 48 MB (was ~16%, 111 MB).
 * Memory: the TV sits at 55-65% used. 2.4 GB total, ~0.5 GB kernel/firmware, then system, Google services
   (Play Store, Assistant, keyboard, Play services ~0.4 GB) and apps Android keeps cached (YouTube 317 MB).
+* End of session: owner turned Wireless debugging off; relays and adb server stopped; `scripts/check-adb-closed.sh`:
+  ALL CLOSED (no wireless service advertised, 5555 refuses, the old connect port closed). Branch `ui-rewrite` pushed.
